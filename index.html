@@ -3,44 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UA ЛОТЕРЕЯ</title>
+    <title>UA ЛОТЕРЕЯ - PREMIUM</title>
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <style>
-        body { background: #0b101b; color: white; font-family: sans-serif; display: flex; justify-content: center; padding: 20px; margin: 0; }
-        .main { background: #151b2b; padding: 25px; border-radius: 20px; width: 100%; max-width: 380px; border-top: 4px solid #ffd700; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .balance-box { background: #1e263d; padding: 15px; border-radius: 12px; margin: 15px 0; border: 1px solid #2a3454; }
-        #money { color: #4caf50; font-size: 32px; font-weight: bold; }
-        #buy-btn { background: #ffd700; color: #000; border: none; padding: 18px; width: 100%; font-weight: bold; border-radius: 10px; cursor: pointer; text-transform: uppercase; font-size: 16px; width: 100%; }
+        body { background: #0b101b; color: white; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; padding: 20px; margin: 0; }
+        .main { background: linear-gradient(145deg, #151b2b, #1e263d); padding: 25px; border-radius: 24px; width: 100%; max-width: 380px; border: 1px solid #2a3454; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.6); }
+        .balance-box { background: rgba(0, 0, 0, 0.3); padding: 20px; border-radius: 16px; margin: 15px 0; border: 1px dashed #ffd700; }
+        #money { color: #ffd700; font-size: 36px; font-weight: 800; }
+        #buy-btn { background: linear-gradient(90deg, #ffd700, #ffaa00); color: #000; border: none; padding: 18px; width: 100%; font-weight: 900; border-radius: 14px; cursor: pointer; text-transform: uppercase; font-size: 16px; transition: 0.2s; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3); }
+        #buy-btn:active { transform: scale(0.98); }
         .tickets-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
-        .ticket { background: #0057b7; height: 80px; display: flex; align-items: center; justify-content: center; border-radius: 12px; cursor: pointer; font-weight: bold; font-size: 20px; border: 2px solid #004494; }
-        .ticket.opened { background: #1e263d; border: 1px solid #2a3454; color: #444; }
-        .win { color: #ffd700; font-size: 22px; font-weight: bold; }
+        .ticket { background: #0057b7; height: 80px; display: flex; align-items: center; justify-content: center; border-radius: 12px; cursor: pointer; font-weight: bold; font-size: 20px; border-bottom: 4px solid #004494; color: white; transition: 0.1s; }
+        .ticket.opened { background: #0f1422; border: 1px solid #2a3454; color: #333; cursor: default; border-bottom: none; }
+        .leaderboard { margin-top: 25px; text-align: left; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 14px; font-size: 13px; border: 1px solid #2a3454; }
+        .win-anim { color: #ffd700; font-size: 24px; font-weight: bold; animation: pop 0.3s; }
+        @keyframes pop { 0% {transform: scale(0.5);} 100% {transform: scale(1);} }
     </style>
 </head>
 <body>
     <div class="main">
         <div id="ton-connect" style="display: flex; justify-content: center; margin-bottom: 15px;"></div>
-        <h1 style="color: #0057b7; margin: 0;">UA ЛОТЕРЕЯ</h1>
+        <h1 style="color: #fff; margin: 0; font-size: 22px;">UA ЛОТЕРЕЯ</h1>
         <div class="balance-box">
-            <span>ВАШ БАЛАНС:</span><br>
-            <strong id="money">...</strong> <small>UA</small>
+            <span style="font-size: 12px; opacity: 0.7;">МІЙ ВИГРАШ:</span><br>
+            <strong id="money">...</strong> <small style="color: #ffd700;">UA</small>
         </div>
-        <button id="buy-btn" onclick="buyWithWallet()">КУПИТИ ПАЧКУ (1000 UA)</button>
+        <button id="buy-btn" onclick="buyWithWallet()">КУПИТИ ПАЧКУ (0.01 TON)</button>
         <div id="tickets-area" class="tickets-grid"></div>
+        <div class="leaderboard">
+            <h3 style="color: #ffd700; margin: 0 0 10px 0; font-size: 14px; text-transform: uppercase;">🏆 ТОП ГРАВЦІВ:</h3>
+            <div id="leader-list">Завантаження...</div>
+        </div>
     </div>
 
     <script>
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-            manifestUrl: 'https://leslav2025.github.io/Uasprint/tonconnect-manifest.json?v=100',
+            manifestUrl: 'https://leslav2025.github.io/Uasprint/tonconnect-manifest.json?v=102',
             buttonRootId: 'ton-connect'
         });
 
-        const snd = {
-            buy: new Audio('https://www.soundjay.com/buttons/sounds/button-09.mp3'),
-            win: new Audio('https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3'),
-            scratch: new Audio('https://www.soundjay.com/buttons/sounds/button-50.mp3')
+        // Звукові ефекти
+        const sounds = {
+            buy: new Audio('https://raw.githubusercontent.com/rafael-lua/codepen-assets/master/buy.mp3'),
+            scratch: new Audio('https://www.soundjay.com/buttons/sounds/button-50.mp3'),
+            win: new Audio('https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3')
         };
 
         const firebaseConfig = { 
@@ -57,22 +65,34 @@
             const doc = await db.collection('users').doc('player1').get();
             balance = doc.exists ? doc.data().amount : 3800;
             document.getElementById('money').innerText = balance;
+            updateLeaders();
+        }
+
+        async function updateLeaders() {
+            const snap = await db.collection('users').orderBy('amount', 'desc').limit(5).get();
+            let html = "";
+            snap.forEach(d => {
+                html += `<div style="display:flex;justify-content:space-between;margin-bottom:5px">
+                            <span>👤 ${d.id}</span><b>${d.data().amount} UA</b>
+                         </div>`;
+            });
+            document.getElementById('leader-list').innerHTML = html;
         }
 
         async function buyWithWallet() {
-            if (!tonConnectUI.connected) return alert("Спочатку підключіть гаманець!");
+            if (!tonConnectUI.connected) return alert("Підключіть гаманець!");
             const tx = {
                 validUntil: Math.floor(Date.now() / 1000) + 300,
                 messages: [{
                     address: "EQBrD-UZ8w2tAyxCNjO8lF4ioTwI-ELiQgF7kclC7gM2UOO_",
-                    amount: "50000000" 
+                    amount: "10000000" // 0.01 TON
                 }]
             };
             try {
                 await tonConnectUI.sendTransaction(tx);
-                snd.buy.play();
+                sounds.buy.play();
                 generateTickets();
-            } catch (e) { alert("Помилка верифікації. Спробуйте оновити сторінку."); }
+            } catch (e) { alert("Помилка транзакції."); }
         }
 
         function generateTickets() {
@@ -84,15 +104,18 @@
                 t.onclick = function() {
                     if (this.classList.contains('opened')) return;
                     this.classList.add('opened');
-                    let win = Math.random() > 0.85 ? 500 : 0;
+                    let win = Math.random() > 0.8 ? (Math.floor(Math.random() * 5) + 1) * 500 : 0;
                     if (win > 0) { 
-                        balance += win; snd.win.play(); 
-                        this.innerHTML = `<span class="win">+${win}</span>`; 
+                        balance += win; 
+                        sounds.win.play();
+                        this.innerHTML = `<span class="win-anim">+${win}</span>`; 
                     } else { 
-                        snd.scratch.play(); this.innerText = "×"; 
+                        sounds.scratch.play();
+                        this.innerText = "✕"; 
                     }
                     document.getElementById('money').innerText = balance;
                     db.collection('users').doc('player1').set({ amount: balance }, { merge: true });
+                    updateLeaders();
                 };
                 area.appendChild(t);
             }
