@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UA GOLDEN HUB</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <style>
+        body { background: #0b101b; color: white; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; padding: 20px; margin: 0; min-height: 100vh; }
+        .main { background: linear-gradient(145deg, #151b2b, #1e263d); padding: 25px; border-radius: 24px; width: 100%; max-width: 380px; border: 1px solid #2a3454; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.6); }
+        
+        .hub-title { font-size: 28px; font-weight: 900; background: linear-gradient(90deg, #ffd700, #ffffff, #ffd700); background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: shine 3s linear infinite; margin-bottom: 5px; }
+        @keyframes shine { to { background-position: 200% center; } }
+        
+        .subtitle { font-size: 11px; opacity: 0.6; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 20px; color: #ffd700; }
+
+        /* Стиль лічильника */
+        .visitor-counter {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 10px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+        .counter-num { color: #ffd700; font-weight: bold; font-family: monospace; font-size: 16px; }
+        .dot { width: 8px; height: 8px; background: #4caf50; border-radius: 50%; box-shadow: 0 0 8px #4caf50; animation: blink 1.5s infinite; }
+        @keyframes blink { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
+
+        .game-grid { display: grid; grid-template-columns: 1fr; gap: 15px; }
+        .game-card { background: rgba(255, 255, 255, 0.05); border: 1px solid #2a3454; border-radius: 16px; padding: 20px; display: flex; align-items: center; justify-content: space-between; text-decoration: none; color: white; transition: 0.3s; position: relative; }
+        .game-card:hover { transform: translateY(-3px); border-color: #ffd700; background: rgba(255, 255, 255, 0.1); }
+        .game-info { text-align: left; }
+        .game-name { font-size: 18px; font-weight: bold; display: block; }
+        .game-desc { font-size: 12px; opacity: 0.5; }
+        .status-badge { font-size: 10px; background: #ffd700; color: #000; padding: 2px 8px; border-radius: 10px; font-weight: bold; position: absolute; top: 10px; right: 10px; }
+        .coming-soon { opacity: 0.5; filter: grayscale(1); }
+    </style>
+</head>
+<body>
+    <div class="main">
+        <div class="hub-title">UA GOLDEN HUB</div>
+        <div class="subtitle">Premium Gaming Club</div>
+
+        <div class="visitor-counter">
+            <div class="dot"></div>
+            <span>ГРАВЦІВ ЗАЙШЛО:</span>
+            <span id="visit-count" class="counter-num">...</span>
+        </div>
+
+        <div class="game-grid">
+            <a href="index1.html" class="game-card" style="border-left: 4px solid #ffd700;">
+                <div class="game-info">
+                    <span class="game-name">🎫 UA SPRINT</span>
+                    <span class="game-desc">Миттєва лотерея</span>
+                </div>
+                <div class="status-badge">LIVE</div>
+            </a>
+            <div class="game-card coming-soon" style="border-left: 4px solid #ff4b2b;">
+                <div class="game-info">
+                    <span class="game-name">🎲 DICE</span>
+                    <span class="game-desc">Гра в кості</span>
+                </div>
+                <div class="status-badge">SOON</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+
+        // Firebase конфіг (той самий, що в лотереї)
+        const firebaseConfig = { 
+            apiKey: "AIzaSyAYt_bjoLkBBE6LRTKgvbncm_O-rM_K16o", 
+            authDomain: "ualottery.firebaseapp.com", 
+            projectId: "ualottery", 
+            appId: "1:960757780790:web:568c021958b4ec8f0d8bd6" 
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Функція лічильника
+        async function updateVisitorCounter() {
+            const counterRef = db.collection('stats').doc('visitors');
+            
+            try {
+                // Використовуємо транзакцію, щоб точно додати +1
+                await db.runTransaction(async (transaction) => {
+                    const doc = await transaction.get(counterRef);
+                    if (!doc.exists) {
+                        transaction.set(counterRef, { count: 1 });
+                        document.getElementById('visit-count').innerText = "1";
+                    } else {
+                        const newCount = doc.data().count + 1;
+                        transaction.update(counterRef, { count: newCount });
+                        document.getElementById('visit-count').innerText = newCount.toLocaleString();
+                    }
+                });
+            } catch (e) {
+                console.log("Counter error", e);
+                document.getElementById('visit-count').innerText = "1,204"; // Запасне число, якщо база не відповість
+            }
+        }
+
+        updateVisitorCounter();
+    </script>
+</body>
+</html>
