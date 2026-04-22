@@ -69,13 +69,14 @@
                 </div>
                 <div class="status-badge">LIVE</div>
             </a>
-            <div class="game-card" style="opacity: 0.4; border-left: 4px solid #444;">
+            
+            <a href="dice.html" class="game-card" style="border-left: 4px solid #ff4b2b;">
                 <div class="game-info">
-                    <span class="game-name">🎲 DICE GAMES</span>
-                    <span style="font-size: 11px; opacity:0.5;">В розробці</span>
+                    <span class="game-name">🎲 UA DICE</span>
+                    <span style="font-size: 11px; opacity:0.5;">Кидай кубики</span>
                 </div>
-                <div class="status-badge" style="background:#444; color:#aaa;">SOON</div>
-            </div>
+                <div class="status-badge">LIVE</div>
+            </a>
         </div>
 
         <button class="rules-btn" onclick="openRules()">ПРАВИЛА ТА УМОВИ</button>
@@ -85,9 +86,9 @@
         <div class="modal-content">
             <div class="modal-title">ПРАВИЛА КЛУБУ</div>
             <div class="modal-text">
-                1. <b>Депозит:</b> Купівля квитків здійснюється через TON гаманець.<br>
+                1. <b>Депозит:</b> Всі ігри працюють через TON гаманець.<br>
                 2. <b>Виплата:</b> Мінімальна сума для виводу — 10,000 UA.<br>
-                3. <b>Процес:</b> Після досягнення ліміту натисніть кнопку "Вивести" для зв'язку з оператором.<br>
+                3. <b>Прозорість:</b> Результати генеруються випадковим чином.<br>
                 4. <b>Підтримка:</b> @tokenpist_bot.
             </div>
             <button class="close-modal" onclick="closeRules()">ЗРОЗУМІЛО</button>
@@ -120,7 +121,7 @@
                 document.getElementById('visit-count').innerText = count;
             });
 
-            // Слухаємо оновлення грошової статистики в реальному часі
+            // Слухаємо глобальну статистику
             db.collection('stats').doc('global').onSnapshot((doc) => {
                 if (doc.exists) {
                     const data = doc.data();
