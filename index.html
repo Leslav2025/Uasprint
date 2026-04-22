@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UA ЛОТЕРЕЯ - PREMIUM</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
@@ -15,8 +16,8 @@
         #buy-btn { background: linear-gradient(90deg, #ffd700, #ffaa00); color: #000; border: none; padding: 18px; width: 100%; font-weight: 900; border-radius: 14px; cursor: pointer; text-transform: uppercase; font-size: 16px; transition: 0.2s; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3); }
         #buy-btn:active { transform: scale(0.98); }
         .tickets-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
-        .ticket { background: #0057b7; height: 80px; display: flex; align-items: center; justify-content: center; border-radius: 12px; cursor: pointer; font-weight: bold; font-size: 20px; border-bottom: 4px solid #004494; color: white; transition: 0.1s; }
-        .ticket.opened { background: #0f1422; border: 1px solid #2a3454; color: #333; cursor: default; border-bottom: none; }
+        .ticket { background: #0057b7; height: 80px; display: flex; align-items: center; justify-content: center; border-radius: 12px; cursor: pointer; font-weight: bold; font-size: 20px; border-bottom: 4px solid #004494; color: white; transition: 0.1s; position: relative; overflow: hidden; }
+        .ticket.opened { background: #0f1422; border: 1px solid #2a3454; color: #444; cursor: default; border-bottom: none; }
         .leaderboard { margin-top: 25px; text-align: left; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 14px; font-size: 13px; border: 1px solid #2a3454; }
         .win-anim { color: #ffd700; font-size: 24px; font-weight: bold; animation: pop 0.3s; }
         @keyframes pop { 0% {transform: scale(0.5);} 100% {transform: scale(1);} }
@@ -25,7 +26,7 @@
 <body>
     <div class="main">
         <div id="ton-connect" style="display: flex; justify-content: center; margin-bottom: 15px;"></div>
-        <h1 style="color: #fff; margin: 0; font-size: 22px;">UA ЛОТЕРЕЯ</h1>
+        <h1 id="user-display" style="color: #fff; margin: 0; font-size: 18px; opacity: 0.8;">Завантаження...</h1>
         <div class="balance-box">
             <span style="font-size: 12px; opacity: 0.7;">МІЙ ВИГРАШ:</span><br>
             <strong id="money">...</strong> <small style="color: #ffd700;">UA</small>
@@ -33,20 +34,30 @@
         <button id="buy-btn" onclick="buyWithWallet()">КУПИТИ ПАЧКУ (0.01 TON)</button>
         <div id="tickets-area" class="tickets-grid"></div>
         <div class="leaderboard">
-            <h3 style="color: #ffd700; margin: 0 0 10px 0; font-size: 14px; text-transform: uppercase;">🏆 ТОП ГРАВЦІВ:</h3>
-            <div id="leader-list">Завантаження...</div>
+            <h3 style="color: #ffd700; margin: 0 0 10px 0; font-size: 14px;">🏆 ТОП ГРАВЦІВ:</h3>
+            <div id="leader-list">Оновлення лідерів...</div>
         </div>
     </div>
 
     <script>
+        // Ініціалізація Telegram
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        
+        let userName = "Гравець";
+        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+            userName = tg.initDataUnsafe.user.username || tg.initDataUnsafe.user.first_name || "Гравець";
+        }
+        document.getElementById('user-display').innerText = "ПРИВІТ, " + userName.toUpperCase();
+
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-            manifestUrl: 'https://leslav2025.github.io/Uasprint/tonconnect-manifest.json?v=102',
+            manifestUrl: 'https://leslav2025.github.io/Uasprint/tonconnect-manifest.json?v=105',
             buttonRootId: 'ton-connect'
         });
 
-        // Звукові ефекти
+        // Покращені звуки
         const sounds = {
-            buy: new Audio('https://raw.githubusercontent.com/rafael-lua/codepen-assets/master/buy.mp3'),
+            buy: new Audio('https://www.soundjay.com/buttons/sounds/button-09.mp3'),
             scratch: new Audio('https://www.soundjay.com/buttons/sounds/button-50.mp3'),
             win: new Audio('https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3')
         };
@@ -62,8 +73,8 @@
         let balance = 0;
 
         async function load() {
-            const doc = await db.collection('users').doc('player1').get();
-            balance = doc.exists ? doc.data().amount : 3800;
+            const doc = await db.collection('users').doc(userName).get();
+            balance = doc.exists ? doc.data().amount : 0;
             document.getElementById('money').innerText = balance;
             updateLeaders();
         }
@@ -72,15 +83,20 @@
             const snap = await db.collection('users').orderBy('amount', 'desc').limit(5).get();
             let html = "";
             snap.forEach(d => {
+                const name = d.id;
+                const amt = d.data().amount;
                 html += `<div style="display:flex;justify-content:space-between;margin-bottom:5px">
-                            <span>👤 ${d.id}</span><b>${d.data().amount} UA</b>
+                            <span>👤 ${name}</span><b>${amt} UA</b>
                          </div>`;
             });
             document.getElementById('leader-list').innerHTML = html;
         }
 
         async function buyWithWallet() {
-            if (!tonConnectUI.connected) return alert("Підключіть гаманець!");
+            if (!tonConnectUI.connected) {
+                tg.showAlert("Будь ласка, підключіть гаманець TON!");
+                return;
+            }
             const tx = {
                 validUntil: Math.floor(Date.now() / 1000) + 300,
                 messages: [{
@@ -90,9 +106,11 @@
             };
             try {
                 await tonConnectUI.sendTransaction(tx);
-                sounds.buy.play();
+                sounds.buy.play().catch(() => {});
                 generateTickets();
-            } catch (e) { alert("Помилка транзакції."); }
+            } catch (e) {
+                console.error(e);
+            }
         }
 
         function generateTickets() {
@@ -104,17 +122,20 @@
                 t.onclick = function() {
                     if (this.classList.contains('opened')) return;
                     this.classList.add('opened');
-                    let win = Math.random() > 0.8 ? (Math.floor(Math.random() * 5) + 1) * 500 : 0;
+                    
+                    let win = Math.random() > 0.8 ? (Math.floor(Math.random() * 5) + 1) * 200 : 0;
+                    
                     if (win > 0) { 
                         balance += win; 
-                        sounds.win.play();
+                        sounds.win.play().catch(() => {});
                         this.innerHTML = `<span class="win-anim">+${win}</span>`; 
                     } else { 
-                        sounds.scratch.play();
+                        sounds.scratch.play().catch(() => {});
                         this.innerText = "✕"; 
                     }
+                    
                     document.getElementById('money').innerText = balance;
-                    db.collection('users').doc('player1').set({ amount: balance }, { merge: true });
+                    db.collection('users').doc(userName).set({ amount: balance }, { merge: true });
                     updateLeaders();
                 };
                 area.appendChild(t);
