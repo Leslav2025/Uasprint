@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UA ЛОТЕРЕЯ - СПРІНТ</title>
+    <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <style>
+        body { background: #0b101b; color: white; font-family: sans-serif; display: flex; justify-content: center; padding: 20px; }
+        .main { background: #151b2b; padding: 25px; border-radius: 20px; width: 100%; max-width: 380px; border-top: 4px solid #ffd700; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .wallet-container { margin-bottom: 15px; display: flex; justify-content: center; }
+        .header h1 { margin: 0; color: #0057b7; text-shadow: 1px 1px #fff; font-size: 24px; }
+        .header p { color: #ffd700; font-size: 12px; font-weight: bold; margin-top: 5px; }
+        .balance-box { background: #1e263d; padding: 15px; border-radius: 12px; margin: 15px 0; border: 1px solid #2a3454; }
+        #money { color: #4caf50; font-size: 28px; }
+        #buy-btn { background: #ffd700; color: #000; border: none; padding: 18px; width: 100%; font-weight: bold; border-radius: 10px; cursor: pointer; text-transform: uppercase; margin-bottom: 20px; }
+        .tickets-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .ticket { background: #0057b7; height: 70px; display: flex; align-items: center; justify-content: center; border-radius: 10px; cursor: pointer; font-weight: bold; border: 1px solid #004494; color: white; }
+        .ticket.opened { background: #1e263d; border: 1px solid #2a3454; }
+        .win { color: #ffd700; font-size: 18px; }
+    </style>
+</head>
+<body>
+    <div class="main">
+        <div id="ton-connect" class="wallet-container"></div>
+        <div class="header">
+            <h1>UA ЛОТЕРЕЯ</h1>
+            <p>СЕРІЯ: СПРІНТ (TON UA)</p>
+        </div>
+        <div class="balance-box">
+            <span>Ваш баланс:</span>
+            <strong id="money">...</strong> <small>UA</small>
+        </div>
+        <button id="buy-btn" onclick="buyWithWallet()">КУПИТИ ПАЧКУ (1000 UA)</button>
+        <div id="tickets-area" class="tickets-grid"></div>
+    </div>
+
+    <script>
+        const myWallet = "UQDXq1iAqu88tVRG62_k03kAXELu_1gzRBMye-VZoFRIRtWw";
+        const uaContract = "EQBrD-UZ8w2tAyxCNjO8lF4ioTwI-ELiQgF7kclC7gM2UOO_";
+
+        const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+            manifestUrl: 'https://leslav2025.github.io/Uasprint/tonconnect-manifest.json',
+            buttonRootId: 'ton-connect'
+        });
+
+        const snd = {
+            buy: new Audio('https://www.soundjay.com/buttons/sounds/button-09.mp3'),
+            win: new Audio('https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3'),
+            scratch: new Audio('https://www.soundjay.com/buttons/sounds/button-50.mp3')
+        };
+
+        const firebaseConfig = { 
+            apiKey: "AIzaSyAYt_bjoLkBBE6LRTKgvbncm_O-rM_K16o", 
+            authDomain: "ualottery.firebaseapp.com", 
+            projectId: "ualottery", 
+            appId: "1:960757780790:web:568c021958b4ec8f0d8bd6" 
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        let balance = 0;
+
+        async function load() {
+            const doc = await db.collection('users').doc('player1').get();
+            balance = doc.exists ? doc.data().amount : 3800;
+            document.getElementById('money').innerText = balance;
+        }
+
+        async function buyWithWallet() {
+            if (!tonConnectUI.connected) return alert("Підключіть гаманець!");
+            const transaction = {
+                validUntil: Math.floor(Date.now() / 1000) + 300,
+                messages: [{
+                    address: uaContract,
+                    amount: "50000000",
+                    payload: "te6cckEBAQEAnQAAu37S6Y0AAAAAAAAAAAAAAAAAAAC7ftLpjQAAAALpYvYf"
+                }]
+            };
+            try {
+                await tonConnectUI.sendTransaction(transaction);
+                snd.buy.play();
+                generateTickets();
+            } catch (e) { alert("Помилка або скасування"); }
+        }
+
+        function generateTickets() {
+            const area = document.getElementById('tickets-area');
+            area.innerHTML = "";
+            for (let i = 0; i < 10; i++) {
+                const t = document.createElement('div');
+                t.className = 'ticket';
+                t.innerText = "UA";
+                t.onclick = function() {
+                    if (this.classList.contains('opened')) return;
+                    this.classList.add('opened');
+                    let win = Math.random() > 0.8 ? 500 : 0;
+                    if (win > 0) { 
+                        balance += win; 
+                        snd.win.play(); 
+                        this.innerHTML = `<span class="win">+${win}</span>`; 
+                    } else { 
+                        snd.scratch.play(); 
+                        this.innerText = "×"; 
+                    }
+                    document.getElementById('money').innerText = balance;
+                    db.collection('users').doc('player1').update({ amount: balance });
+                };
+                area.appendChild(t);
+            }
+        }
+        load();
+    </script>
+</body>
+</html>
