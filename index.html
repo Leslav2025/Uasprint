@@ -8,39 +8,46 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <style>
-        body { background: #0b101b; color: white; font-family: sans-serif; display: flex; justify-content: center; padding: 20px; }
+        body { background: #0b101b; color: white; font-family: sans-serif; display: flex; justify-content: center; padding: 20px; margin: 0; }
         .main { background: #151b2b; padding: 25px; border-radius: 20px; width: 100%; max-width: 380px; border-top: 4px solid #ffd700; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .wallet-container { margin-bottom: 15px; display: flex; justify-content: center; }
-        .header h1 { margin: 0; color: #0057b7; text-shadow: 1px 1px #fff; font-size: 24px; }
-        .header p { color: #ffd700; font-size: 12px; font-weight: bold; margin-top: 5px; }
-        .balance-box { background: #1e263d; padding: 15px; border-radius: 12px; margin: 15px 0; border: 1px solid #2a3454; }
-        #money { color: #4caf50; font-size: 28px; }
-        #buy-btn { background: #ffd700; color: #000; border: none; padding: 18px; width: 100%; font-weight: bold; border-radius: 10px; cursor: pointer; text-transform: uppercase; margin-bottom: 20px; }
-        .tickets-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .ticket { background: #0057b7; height: 70px; display: flex; align-items: center; justify-content: center; border-radius: 10px; cursor: pointer; font-weight: bold; border: 1px solid #004494; color: white; }
-        .ticket.opened { background: #1e263d; border: 1px solid #2a3454; }
-        .win { color: #ffd700; font-size: 18px; }
+        .balance-box { background: #1e263d; padding: 15px; border-radius: 12px; margin: 10px 0; border: 1px solid #2a3454; }
+        #money { color: #4caf50; font-size: 32px; font-weight: bold; }
+        .rate { font-size: 13px; color: #888; margin-top: 5px; }
+        #buy-btn { background: #ffd700; color: #000; border: none; padding: 18px; width: 100%; font-weight: bold; border-radius: 10px; cursor: pointer; text-transform: uppercase; font-size: 16px; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3); }
+        .tickets-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
+        .ticket { background: #0057b7; height: 80px; display: flex; align-items: center; justify-content: center; border-radius: 12px; cursor: pointer; font-weight: bold; font-size: 20px; border: 2px solid #004494; transition: 0.2s; }
+        .ticket:active { transform: scale(0.95); }
+        .ticket.opened { background: #1e263d; border: 1px solid #2a3454; color: #444; }
+        .win { color: #ffd700; font-size: 22px; font-weight: bold; text-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
+        .leaderboard { margin-top: 25px; text-align: left; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 12px; border: 1px solid #222; }
+        .leaderboard h3 { font-size: 14px; margin: 0 0 10px 0; color: #ffd700; text-transform: uppercase; letter-spacing: 1px; }
+        .player-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid #2a3454; }
     </style>
 </head>
 <body>
     <div class="main">
         <div id="ton-connect" class="wallet-container"></div>
-        <div class="header">
-            <h1>UA ЛОТЕРЕЯ</h1>
-            <p>СЕРІЯ: СПРІНТ (TON UA)</p>
-        </div>
+        <h1 style="color: #0057b7; margin: 0; font-size: 24px; text-shadow: 1px 1px #000;">UA ЛОТЕРЕЯ</h1>
+        
         <div class="balance-box">
-            <span>Ваш баланс:</span>
+            <span>ВАШ БАЛАНС:</span><br>
             <strong id="money">...</strong> <small>UA</small>
+            <div class="rate">≈ <span id="usd-val">0.00</span> $</div>
         </div>
+
         <button id="buy-btn" onclick="buyWithWallet()">КУПИТИ ПАЧКУ (1000 UA)</button>
+
         <div id="tickets-area" class="tickets-grid"></div>
+
+        <div class="leaderboard">
+            <h3>🏆 ТОП ГРАВЦІВ:</h3>
+            <div id="leader-list">Оновлення...</div>
+        </div>
     </div>
 
     <script>
-        const myWallet = "UQDXq1iAqu88tVRG62_k03kAXELu_1gzRBMye-VZoFRIRtWw";
         const uaContract = "EQBrD-UZ8w2tAyxCNjO8lF4ioTwI-ELiQgF7kclC7gM2UOO_";
-
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://leslav2025.github.io/Uasprint/tonconnect-manifest.json',
             buttonRootId: 'ton-connect'
@@ -62,15 +69,31 @@
         const db = firebase.firestore();
         let balance = 0;
 
-        async function load() {
+        async function loadData() {
             const doc = await db.collection('users').doc('player1').get();
             balance = doc.exists ? doc.data().amount : 3800;
+            updateUI();
+            loadLeaderboard();
+        }
+
+        function updateUI() {
+            const uaPriceInUsd = 0.00035; // Це приблизний курс UA/$
             document.getElementById('money').innerText = balance;
+            document.getElementById('usd-val').innerText = (balance * uaPriceInUsd).toFixed(2);
+        }
+
+        async function loadLeaderboard() {
+            const snap = await db.collection('users').orderBy('amount', 'desc').limit(5).get();
+            let html = "";
+            snap.forEach(doc => {
+                html += `<div class="player-row"><span>👤 ${doc.id}</span><strong>${doc.data().amount} UA</strong></div>`;
+            });
+            document.getElementById('leader-list').innerHTML = html;
         }
 
         async function buyWithWallet() {
             if (!tonConnectUI.connected) return alert("Підключіть гаманець!");
-            const transaction = {
+            const tx = {
                 validUntil: Math.floor(Date.now() / 1000) + 300,
                 messages: [{
                     address: uaContract,
@@ -79,10 +102,10 @@
                 }]
             };
             try {
-                await tonConnectUI.sendTransaction(transaction);
+                await tonConnectUI.sendTransaction(tx);
                 snd.buy.play();
                 generateTickets();
-            } catch (e) { alert("Помилка або скасування"); }
+            } catch (e) { console.log(e); }
         }
 
         function generateTickets() {
@@ -90,27 +113,25 @@
             area.innerHTML = "";
             for (let i = 0; i < 10; i++) {
                 const t = document.createElement('div');
-                t.className = 'ticket';
-                t.innerText = "UA";
+                t.className = 'ticket'; t.innerText = "UA";
                 t.onclick = function() {
                     if (this.classList.contains('opened')) return;
                     this.classList.add('opened');
-                    let win = Math.random() > 0.8 ? 500 : 0;
+                    let win = Math.random() > 0.85 ? 500 : 0;
                     if (win > 0) { 
-                        balance += win; 
-                        snd.win.play(); 
+                        balance += win; snd.win.play(); 
                         this.innerHTML = `<span class="win">+${win}</span>`; 
                     } else { 
-                        snd.scratch.play(); 
-                        this.innerText = "×"; 
+                        snd.scratch.play(); this.innerText = "×"; 
                     }
-                    document.getElementById('money').innerText = balance;
-                    db.collection('users').doc('player1').update({ amount: balance });
+                    updateUI();
+                    db.collection('users').doc('player1').set({ amount: balance }, { merge: true });
+                    loadLeaderboard();
                 };
                 area.appendChild(t);
             }
         }
-        load();
+        loadData();
     </script>
 </body>
 </html>
