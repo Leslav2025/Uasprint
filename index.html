@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UA ЛОТЕРЕЯ - СПРІНТ</title>
+    <title>UA ЛОТЕРЕЯ</title>
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
@@ -32,9 +32,8 @@
     </div>
 
     <script>
-        // Я додав "?v=2", щоб змусити гаманець забути стару помилку
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-            manifestUrl: 'https://leslav2025.github.io/Uasprint/tonconnect-manifest.json?v=2',
+            manifestUrl: 'https://leslav2025.github.io/Uasprint/tonconnect-manifest.json?v=100',
             buttonRootId: 'ton-connect'
         });
 
@@ -61,20 +60,19 @@
         }
 
         async function buyWithWallet() {
-            if (!tonConnectUI.connected) return alert("Підключіть гаманець!");
+            if (!tonConnectUI.connected) return alert("Спочатку підключіть гаманець!");
             const tx = {
                 validUntil: Math.floor(Date.now() / 1000) + 300,
                 messages: [{
                     address: "EQBrD-UZ8w2tAyxCNjO8lF4ioTwI-ELiQgF7kclC7gM2UOO_",
-                    amount: "50000000",
-                    payload: "te6cckEBAQEAnQAAu37S6Y0AAAAAAAAAAAAAAAAAAAC7ftLpjQAAAALpYvYf"
+                    amount: "50000000" 
                 }]
             };
             try {
                 await tonConnectUI.sendTransaction(tx);
                 snd.buy.play();
                 generateTickets();
-            } catch (e) { alert("Помилка: " + e.message); }
+            } catch (e) { alert("Помилка верифікації. Спробуйте оновити сторінку."); }
         }
 
         function generateTickets() {
