@@ -3,28 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UA MINES - ГРА</title>
+    <title>UA MINES - HARDCORE</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <style>
-        body { background: #0b101b; color: white; font-family: sans-serif; text-align: center; margin: 0; padding: 20px; }
-        .main { background: #151b2b; padding: 20px; border-radius: 24px; max-width: 360px; margin: auto; border: 1px solid #2a3454; }
-        .balance-box { background: rgba(255,215,0,0.1); padding: 15px; border-radius: 15px; border: 1px solid #ffd700; margin: 15px 0; font-size: 22px; color: #ffd700; font-weight: bold; }
-        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 20px 0; }
-        .cell { aspect-ratio: 1; background: #1a2235; border-radius: 8px; border: 1px solid #2a3454; display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; }
-        .cell.open { background: #2a3454; cursor: default; }
-        .controls { display: flex; flex-direction: column; gap: 10px; }
-        button { padding: 15px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+        body { background: #0b101b; color: white; font-family: 'Segoe UI', sans-serif; text-align: center; margin: 0; padding: 20px; }
+        .main { background: linear-gradient(145deg, #151b2b, #1e263d); padding: 25px; border-radius: 24px; max-width: 360px; margin: auto; border: 1px solid #2a3454; box-shadow: 0 15px 35px rgba(0,0,0,0.5); }
+        .balance-box { background: rgba(255,215,0,0.1); padding: 15px; border-radius: 18px; border: 1px solid #ffd700; margin: 15px 0; font-size: 24px; color: #ffd700; font-weight: 900; }
+        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin: 20px 0; }
+        .cell { aspect-ratio: 1; background: #1a2235; border-radius: 12px; border: 1px solid #2a3454; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; transition: 0.2s; }
+        .cell.open { background: #2a3454; cursor: default; border-color: #ffd700; }
+        .controls { display: flex; flex-direction: column; gap: 12px; }
+        button { padding: 18px; border-radius: 16px; border: none; font-weight: 900; cursor: pointer; text-transform: uppercase; font-size: 16px; }
         #start-btn { background: #ffd700; color: #000; }
-        #cashout-btn { background: #4caf50; color: white; display: none; }
-        button:disabled { opacity: 0.5; }
+        #cashout-btn { background: #28a745; color: white; display: none; }
+        .warning-text { color: #ff4b2b; font-size: 11px; font-weight: bold; margin-top: 10px; }
     </style>
 </head>
 <body>
     <div class="main">
-        <a href="index.html" style="color:#ffd700; text-decoration:none; float:left; font-size:12px;">← НАЗАД</a>
+        <a href="index.html" style="color:#ffd700; text-decoration:none; float:left; font-size:12px; font-weight:bold;">← НАЗАД</a>
         <div id="ton-connect" style="display:flex; justify-content:center; margin-bottom:10px;"></div>
         
         <div class="balance-box"><span id="user-balance">0</span> UA</div>
@@ -35,6 +35,9 @@
             <button id="start-btn" onclick="startGame()">ГРАТИ (100 UA)</button>
             <button id="cashout-btn" onclick="cashOut()">ЗАБРАТИ: <span id="win-amount">0</span> UA</button>
         </div>
+        
+        <p class="warning-text">⚠️ ОБЕРЕЖНО: ВИБУХ КОШТУЄ -500 UA!</p>
+        <button style="background:transparent; color:#ffd700; border:1px solid #ffd700; font-size:10px; margin-top:15px; padding:8px;" onclick="buyUA()">ПОПОВНИТИ (0.01 TON)</button>
     </div>
 
     <script>
@@ -46,6 +49,7 @@
         let mines = [];
         let currentWin = 0;
         const bet = 100;
+        const penalty = 500; // ШТРАФ ЗА ПІДРИВ
 
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://leslav2025.github.io/Uasprint/tonconnect-manifest.json',
@@ -61,31 +65,26 @@
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        async function updateBalance(amountChange) {
-            balance += amountChange;
-            await db.collection('users').doc(userName).set({ amount: balance }, { merge: true });
-            document.getElementById('user-balance').innerText = balance.toLocaleString();
-        }
-
         async function loadData() {
             const doc = await db.collection('users').doc(userName).get();
             balance = doc.exists ? (doc.data().amount || 0) : 0;
             document.getElementById('user-balance').innerText = balance.toLocaleString();
         }
 
-        function startGame() {
-            if (balance < bet) return tg.showAlert("Недостатньо балансу!");
+        async function startGame() {
+            if (balance < (bet + penalty)) return tg.showAlert(`Потрібно мінімум ${bet + penalty} UA для безпеки (ставка + страховка від підриву)!`);
             
-            // Списання ставки
-            updateBalance(-bet);
-            
+            balance -= bet;
+            await db.collection('users').doc(userName).update({ amount: balance });
+            document.getElementById('user-balance').innerText = balance.toLocaleString();
+
             gameActive = true;
             currentWin = 0;
             mines = Array(25).fill(false);
             
-            // Ставимо 3 випадкові міни
+            // СТАВИМО 5 МІН
             let mCount = 0;
-            while(mCount < 3) {
+            while(mCount < 5) {
                 let r = Math.floor(Math.random() * 25);
                 if(!mines[r]) { mines[r] = true; mCount++; }
             }
@@ -108,33 +107,54 @@
             }
         }
 
-        function openCell(idx, el) {
+        async function openCell(idx, el) {
             if (!gameActive || el.classList.contains('open')) return;
-
             el.classList.add('open');
+
             if (mines[idx]) {
+                // БУМ! МІНУСУЄМО ЩЕ 500
                 el.innerHTML = '💣';
-                gameOver(false);
+                gameActive = false;
+                
+                balance -= penalty;
+                await db.collection('users').doc(userName).update({ amount: balance });
+                
+                document.getElementById('user-balance').innerText = balance.toLocaleString();
+                document.getElementById('start-btn').disabled = false;
+                document.getElementById('cashout-btn').style.display = 'none';
+                
+                tg.showAlert(`💥 БАБАХ! Штраф за підрив: -${penalty} UA.`);
             } else {
                 el.innerHTML = '💎';
-                currentWin += 50; // За кожен діамант +50 UA
+                currentWin += 75; // Підняв виграш за діамант до 75 через високий ризик
                 document.getElementById('win-amount').innerText = currentWin;
             }
         }
 
-        function gameOver(isWin) {
+        async function cashOut() {
+            if (!gameActive || currentWin === 0) return;
+            let totalToReturn = currentWin + bet; 
+            balance += totalToReturn;
+            await db.collection('users').doc(userName).update({ amount: balance });
+            tg.showAlert(`💰 Врятувався! Забрав ${totalToReturn} UA.`);
             gameActive = false;
             document.getElementById('start-btn').disabled = false;
             document.getElementById('cashout-btn').style.display = 'none';
-            if (!isWin) tg.showAlert("💥 ВИ ПРАЦЮВАЛИ НА МІНІ! Ставка згоріла.");
+            loadData();
+            renderGrid();
         }
 
-        async function cashOut() {
-            if (!gameActive || currentWin === 0) return;
-            await updateBalance(currentWin + bet); // Повертаємо ставку + виграш
-            tg.showAlert(`💰 Забрано ${currentWin + bet} UA!`);
-            gameOver(true);
-            renderGrid();
+        async function buyUA() {
+            if (!tonConnectUI.connected) return alert("Підключи гаманець!");
+            try {
+                await tonConnectUI.sendTransaction({
+                    validUntil: Math.floor(Date.now() / 1000) + 300,
+                    messages: [{ address: "EQBrD-UZ8w2tAyxCNjO8lF4ioTwI-ELiQgF7kclC7gM2UOO_", amount: "10000000" }]
+                });
+                balance += 5000;
+                await db.collection('users').doc(userName).set({ amount: balance }, { merge: true });
+                loadData();
+            } catch (e) {}
         }
 
         loadData();
