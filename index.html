@@ -3,115 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UA GOLDEN HUB - 5 ІГОР</title>
+    <title>UA GOLDEN HUB</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <style>
-        body { background: #0b101b; color: white; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; padding: 20px; margin: 0; min-height: 100vh; }
-        .main { background: linear-gradient(145deg, #151b2b, #1e263d); padding: 25px; border-radius: 24px; width: 100%; max-width: 380px; border: 1px solid #2a3454; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.6); position: relative; }
+        body { background: #0b101b; color: white; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .hub-container { width: 100%; max-width: 400px; }
         
-        .hub-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .withdraw-btn-top { color: #ffd700; text-decoration: none; font-size: 12px; font-weight: bold; border: 1px solid #ffd700; padding: 6px 12px; border-radius: 12px; transition: 0.3s; }
-        .withdraw-btn-top:hover { background: rgba(255, 215, 0, 0.1); }
+        .header { text-align: center; margin-bottom: 25px; }
+        .header h1 { font-size: 28px; font-weight: 900; color: #ffd700; margin: 0; text-shadow: 0 0 15px rgba(255,215,0,0.3); }
+        .balance-card { background: linear-gradient(145deg, #1e263d, #151b2b); border-radius: 20px; padding: 20px; border: 1px solid #2a3454; text-align: center; margin-bottom: 20px; }
+        .balance-card span { font-size: 24px; font-weight: bold; color: #ffd700; }
 
-        .hub-title { font-size: 28px; font-weight: 900; background: linear-gradient(90deg, #ffd700, #ffffff, #ffd700); background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: shine 3s linear infinite; margin-bottom: 5px; }
-        @keyframes shine { to { background-position: 200% center; } }
-        
-        .stats-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-        .stat-card { background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 215, 0, 0.1); padding: 12px; border-radius: 16px; }
-        .stat-label { font-size: 9px; opacity: 0.5; display: block; text-transform: uppercase; }
-        .stat-value { font-size: 16px; font-weight: bold; color: #ffd700; }
+        .game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .game-card { background: #1a2235; border: 1px solid #2a3454; border-radius: 18px; padding: 15px; text-align: center; text-decoration: none; color: white; transition: 0.3s; }
+        .game-card:active { transform: scale(0.95); background: #232d47; }
+        .game-card .icon { font-size: 30px; display: block; margin-bottom: 8px; }
+        .game-card .name { font-weight: bold; font-size: 14px; }
 
-        .game-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 25px; }
-        .game-card { background: rgba(255, 255, 255, 0.05); border: 1px solid #2a3454; border-radius: 18px; padding: 15px 20px; display: flex; align-items: center; justify-content: space-between; text-decoration: none; color: white; transition: 0.3s; position: relative; overflow: hidden; }
-        .game-card:hover { border-color: #ffd700; background: rgba(255, 255, 255, 0.08); transform: scale(1.02); }
+        .partner-banner { background: linear-gradient(90deg, #ff8800, #ffd700); color: #000; border-radius: 16px; padding: 15px; margin-top: 20px; text-decoration: none; display: flex; justify-content: space-between; align-items: center; font-weight: 900; }
         
-        .game-info { text-align: left; }
-        .game-name { font-size: 17px; font-weight: bold; display: block; }
-        .game-desc { font-size: 11px; opacity: 0.5; }
-        
-        .badge { font-size: 9px; background: #ffd700; color: #000; padding: 2px 7px; border-radius: 8px; font-weight: 900; }
-        .badge.new { background: #4caf50; color: white; }
-        .badge.hot { background: #ff4b2b; color: white; }
-
-        .rules-link { font-size: 13px; color: #ffd700; text-decoration: underline; opacity: 0.7; cursor: pointer; }
+        #ton-connect { margin-bottom: 15px; display: flex; justify-content: center; }
     </style>
 </head>
 <body>
-    <div class="main">
-        <div class="hub-header">
-            <div style="text-align: left;">
-                <div style="font-size: 10px; opacity: 0.5;">ПРИВІТ,</div>
-                <div id="player-name" style="font-weight: bold; font-size: 14px; color: #ffd700;">Гравець</div>
-            </div>
-            <a href="withdraw.html" class="withdraw-link-top">💳 ВИВІД</a>
+
+    <div class="hub-container">
+        <div class="header">
+            <h1>GOLDEN HUB</h1>
+            <p style="opacity: 0.6; font-size: 12px;">ТВІЙ ПРОВІДНИК У СВІТ UA</p>
         </div>
 
-        <div class="hub-title">UA GOLDEN HUB</div>
-        
-        <div class="stats-container">
-            <div class="stat-card">
-                <span class="stat-label">ВІЙШЛО TON</span>
-                <span id="total-in" class="stat-value">0.00</span>
-            </div>
-            <div class="stat-card">
-                <span class="stat-label">ВАШ БАЛАНС</span>
-                <span id="user-balance" class="stat-value">0</span>
+        <div id="ton-connect"></div>
+
+        <div class="balance-card">
+            <div style="font-size: 12px; opacity: 0.7; margin-bottom: 5px;">ВАШ БАЛАНС</div>
+            <span id="user-balance">0.00</span> <small style="color:#ffd700">UA</small>
+            <div style="margin-top: 15px;">
+                <a href="withdraw.html" style="color: #ffd700; text-decoration: none; font-size: 13px; font-weight: bold; border: 1px solid #ffd700; padding: 5px 15px; border-radius: 10px;">💳 ВИВІД</a>
             </div>
         </div>
 
         <div class="game-grid">
-            <a href="index1.html" class="game-card" style="border-left: 5px solid #ffd700;">
-                <div class="game-info">
-                    <span class="game-name">🎫 UA SPRINT</span>
-                    <span class="game-desc">Миттєва лотерея</span>
-                </div>
-                <span class="badge">CLASSIC</span>
+            <a href="index1.html" class="game-card">
+                <span class="icon">🎟️</span>
+                <span class="name">UA SPRINT</span>
             </a>
-            
-            <a href="dice.html" class="game-card" style="border-left: 5px solid #ff4b2b;">
-                <div class="game-info">
-                    <span class="game-name">🎲 UA DICE</span>
-                    <span class="game-desc">Гра в кості</span>
-                </div>
-                <span class="badge">LIVE</span>
+            <a href="dice.html" class="game-card">
+                <span class="icon">🎲</span>
+                <span class="name">UA DICE</span>
             </a>
-
-            <a href="wheel.html" class="game-card" style="border-left: 5px solid #ff8800;">
-                <div class="game-info">
-                    <span class="game-name">🎡 UA WHEEL</span>
-                    <span class="game-desc">Колесо фортуни</span>
-                </div>
-                <span class="badge">10 SECTORS</span>
+            <a href="wheel.html" class="game-card">
+                <span class="icon">🎡</span>
+                <span class="name">UA WHEEL</span>
             </a>
-
-            <a href="mines.html" class="game-card" style="border-left: 5px solid #4caf50;">
-                <div class="game-info">
-                    <span class="game-name">💣 UA MINES</span>
-                    <span class="game-desc">Знайди золото</span>
-                </div>
-                <span class="badge new">NEW</span>
+            <a href="mines.html" class="game-card">
+                <span class="icon">💣</span>
+                <span class="name">UA MINES</span>
             </a>
-
-            <a href="crash.html" class="game-card" style="border-left: 5px solid #0057b7;">
-                <div class="game-info">
-                    <span class="game-name">🚀 UA CRASH</span>
-                    <span class="game-desc">Встигни забрати</span>
-                </div>
-                <span class="badge hot">HOT</span>
+            <a href="crash.html" class="game-card" style="grid-column: span 2;">
+                <span class="icon">🚀</span>
+                <span class="name">UA CRASH</span>
             </a>
         </div>
 
-        <div class="rules-link" onclick="tg.showAlert('1. Мінімальний вивід 10,000 UA.\n2. Вивід через @tokenpist_bot.\n3. Баланс спільний для всіх ігор.')">ПРАВИЛА ТА ПІДТРИМКА</div>
+        <a href="partner.html" class="partner-banner">
+            <span>ВЛАСНЕ КАЗИНО 🚀</span>
+            <span>➔</span>
+        </a>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
-        tg.ready(); tg.expand();
+        let userName = (tg.initDataUnsafe && tg.initDataUnsafe.user) ? (tg.initDataUnsafe.user.username || tg.initDataUnsafe.user.first_name) : "User";
 
-        let userName = (tg.initDataUnsafe && tg.initDataUnsafe.user) ? (tg.initDataUnsafe.user.username || tg.initDataUnsafe.user.first_name) : "Гравець";
-        document.getElementById('player-name').innerText = userName;
+        // ЛОГІКА ПАРТНЕРСТВА: Зберігаємо реферала
+        const urlParams = new URLSearchParams(window.location.search);
+        const refPartner = urlParams.get('start');
+        if (refPartner) {
+            localStorage.setItem('referred_by', refPartner);
+            console.log("Привів партнер: " + refPartner);
+        }
+
+        const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+            manifestUrl: 'https://leslav2025.github.io/Uasprint/tonconnect-manifest.json',
+            buttonRootId: 'ton-connect'
+        });
 
         const firebaseConfig = { 
             apiKey: "AIzaSyAYt_bjoLkBBE6LRTKgvbncm_O-rM_K16o", 
@@ -122,23 +101,15 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        async function loadHubData() {
-            // Завантаження особистого балансу
-            db.collection('users').doc(userName).onSnapshot((doc) => {
-                if (doc.exists) {
-                    document.getElementById('user-balance').innerText = doc.data().amount.toLocaleString();
-                }
-            });
-
-            // Завантаження глобальної статистики
-            db.collection('stats').doc('global').onSnapshot((doc) => {
-                if (doc.exists) {
-                    document.getElementById('total-in').innerText = (doc.data().totalIn || 0).toFixed(2);
-                }
-            });
+        async function loadBalance() {
+            const doc = await db.collection('users').doc(userName).get();
+            if (doc.exists) {
+                document.getElementById('user-balance').innerText = doc.data().amount.toLocaleString();
+            }
         }
 
-        loadHubData();
+        loadBalance();
+        tg.expand();
     </script>
 </body>
 </html>
