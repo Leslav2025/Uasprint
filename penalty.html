@@ -5,73 +5,106 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UA PENALTY ⚽</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     <style>
-        body { background: #0b101b; color: white; font-family: sans-serif; text-align: center; margin: 0; padding: 20px; }
-        .gate { position: relative; width: 300px; height: 150px; border: 5px solid white; border-bottom: none; margin: 40px auto; background: rgba(255,255,255,0.1); display: flex; }
-        .sector { flex: 1; border: 1px dashed rgba(255,255,255,0.3); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s; }
-        .sector:hover { background: rgba(255,255,0,0.2); }
-        .ball { width: 40px; height: 40px; background: white; border-radius: 50%; position: absolute; bottom: -60px; left: 130px; transition: 0.5s; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
-        .btn-kick { background: linear-gradient(90deg, #ffd700, #ff8800); color: black; padding: 15px 30px; border-radius: 12px; font-weight: bold; border: none; margin-top: 80px; width: 100%; cursor: pointer; }
-        .status { margin-top: 20px; font-size: 18px; font-weight: bold; height: 24px; }
-        .bet-input { background: #151b2b; border: 1px solid #ffd700; color: white; padding: 10px; border-radius: 8px; width: 80px; text-align: center; margin: 10px; }
+        body { background: #0b101b; color: white; font-family: sans-serif; text-align: center; padding: 20px; margin: 0; }
+        .stats { display: flex; justify-content: space-around; background: #151b2b; padding: 10px; border-radius: 15px; margin-bottom: 20px; border: 1px solid #ffd700; }
+        .gate { position: relative; width: 300px; height: 150px; border: 5px solid white; border-bottom: none; margin: 40px auto; background: rgba(255,255,255,0.05); display: flex; }
+        .sector { flex: 1; border: 1px dashed rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 2; }
+        .ball { width: 40px; height: 40px; background: white; border-radius: 50%; position: absolute; bottom: -60px; left: 130px; transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); font-size: 30px; line-height: 40px; }
+        .btn-main { background: linear-gradient(90deg, #ffd700, #ff8800); color: black; padding: 18px; width: 100%; border-radius: 15px; font-weight: 900; border: none; cursor: pointer; font-size: 16px; }
+        .btn-main:disabled { background: #333; color: #777; }
+        #ton-connect { display: flex; justify-content: center; margin-bottom: 15px; }
     </style>
 </head>
 <body>
-    <h2>UA PENALTY ⚽</h2>
-    <div class="status" id="status">Оберіть кут та бийте!</div>
+
+    <div id="ton-connect"></div>
+
+    <div class="stats">
+        <div>М'ячі: <b id="balls-count">0</b></div>
+        <div>Виграш: <b id="win-sum">0</b> TON</div>
+    </div>
 
     <div class="gate">
-        <div class="sector" onclick="selectSector(0)" id="s0">ЛІВО</div>
-        <div class="sector" onclick="selectSector(1)" id="s1">ЦЕНТР</div>
-        <div class="sector" onclick="selectSector(2)" id="s2">ПРАВО</div>
+        <div class="sector" onclick="select(0)" id="s0">ЛІВО</div>
+        <div class="sector" onclick="select(1)" id="s1">ЦЕНТР</div>
+        <div class="sector" onclick="select(2)" id="s2">ПРАВО</div>
         <div class="ball" id="ball">⚽</div>
     </div>
 
-    <div>
-        Ставка: <input type="number" class="bet-input" id="bet" value="1"> TON
+    <div id="game-controls">
+        <button id="buy-btn" class="btn-main" onclick="buyShots()">КУПИТИ 10 УДАРІВ (0.01 TON)</button>
+        <button id="kick-btn" class="btn-main" onclick="kick()" style="display:none;">УДАРИТИ!</button>
     </div>
-    <button class="btn-kick" onclick="play()">УДАРИТИ!</button>
+
+    <p id="msg" style="margin-top:20px; font-weight:bold;"></p>
 
     <script>
+        const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+            manifestUrl: 'https://leslav2025.github.io/Uasprint/tonconnect-manifest.json',
+            buttonRootId: 'ton-connect'
+        });
+
+        let balls = 0;
+        let totalWin = 0;
         let selected = -1;
         const ball = document.getElementById('ball');
-        const status = document.getElementById('status');
 
-        function selectSector(id) {
-            selected = id;
-            document.querySelectorAll('.sector').forEach(s => s.style.background = 'none');
-            document.getElementById('s' + id).style.background = 'rgba(255,215,0,0.4)';
-            status.innerText = "Кут обрано. Бийте!";
+        async function buyShots() {
+            if(!tonConnectUI.connected) return alert("Спочатку підключіть гаманець!");
+            try {
+                await tonConnectUI.sendTransaction({
+                    validUntil: Math.floor(Date.now() / 1000) + 300,
+                    messages: [{ address: "EQBrD-UZ8w2tAyxCNjO8lF4ioTwI-ELiQgF7kclC7gM2UOO_", amount: "10000000" }] // 0.01 TON
+                });
+                balls = 10;
+                updateUI();
+                document.getElementById('buy-btn').style.display = 'none';
+                document.getElementById('kick-btn').style.display = 'block';
+            } catch(e) { alert("Помилка оплати"); }
         }
 
-        function play() {
-            if (selected === -1) return alert("Оберіть кут воріт!");
+        function select(id) {
+            selected = id;
+            document.querySelectorAll('.sector').forEach(s => s.style.background = 'none');
+            document.getElementById('s'+id).style.background = 'rgba(255,215,0,0.3)';
+        }
+
+        function kick() {
+            if(selected === -1) return alert("Оберіть кут!");
+            if(balls <= 0) return;
+
+            balls--;
+            const isGoal = Math.random() > 0.4; // 60% шанс на гол
+            const pos = ['-90px, -120px', '0px, -120px', '90px, -120px'];
             
-            const bet = document.getElementById('bet').value;
-            status.innerText = "Удар...";
-            
-            // Анімація м'яча
-            const positions = ['-80px, -110px', '0px, -110px', '80px, -110px'];
-            const randomGoalkeeper = Math.floor(Math.random() * 3);
-            
-            ball.style.transform = `translate(${positions[selected]}) scale(0.6)`;
+            ball.style.transform = `translate(${pos[selected]}) scale(0.5)`;
 
             setTimeout(() => {
-                if (selected !== randomGoalkeeper) {
-                    status.innerText = `ГОООЛ! 🎉 Виграш: ${bet * 2.8} TON`;
-                    status.style.color = "#4caf50";
+                if(isGoal) {
+                    totalWin += 0.005; // Нагорода за гол
+                    document.getElementById('msg').innerText = "ГОООЛ! +0.005 TON";
+                    document.getElementById('msg').style.color = "#4caf50";
                 } else {
-                    status.innerText = "ВОРОТАР ВІДБИВ! ❌";
-                    status.style.color = "#ff4444";
+                    document.getElementById('msg').innerText = "ПОВЗ / ВІДБИТО!";
+                    document.getElementById('msg').style.color = "#ff4444";
                 }
+                updateUI();
                 
-                // Скидання через 2 сек
                 setTimeout(() => {
                     ball.style.transform = 'translate(0,0) scale(1)';
-                    status.style.color = "white";
-                    status.innerText = "Оберіть кут та бийте!";
-                }, 2000);
+                    if(balls === 0) {
+                        alert(`Гра закінчена! Ваш виграш: ${totalWin.toFixed(3)} TON. Кошти будуть надіслані автоматично.`);
+                        location.reload();
+                    }
+                }, 1000);
             }, 500);
+        }
+
+        function updateUI() {
+            document.getElementById('balls-count').innerText = balls;
+            document.getElementById('win-sum').innerText = totalWin.toFixed(3);
         }
     </script>
 </body>
