@@ -8,21 +8,18 @@
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         body { background: #0b101b; color: white; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; padding: 20px; margin: 0; min-height: 100vh; }
         .main { background: linear-gradient(145deg, #151b2b, #1e263d); padding: 25px; border-radius: 24px; width: 100%; max-width: 380px; border: 1px solid #2a3454; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.6); position: relative; }
         
-        /* Навігація */
         .back-link { position: absolute; top: 15px; left: 20px; color: #ffd700; text-decoration: none; font-size: 12px; font-weight: bold; z-index: 10; }
         .withdraw-link { position: absolute; top: 15px; right: 20px; color: #ffd700; text-decoration: none; font-size: 12px; font-weight: bold; border: 1px solid #ffd700; padding: 4px 8px; border-radius: 8px; z-index: 10; }
         
         .title-wheel { font-size: 26px; font-weight: 900; margin: 30px 0 5px 0; background: linear-gradient(90deg, #ffd700, #ff8800); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         
-        /* КОЛЕСО */
-        .wheel-container { position: relative; width: 280px; height: 280px; margin: 20px auto; }
+        .wheel-container { position: relative; width: 280px; height: 280px; margin: 20px auto; display: flex; justify-content: center; align-items: center; }
         #wheel { width: 100%; height: 100%; border-radius: 50%; border: 4px solid #2a3454; transition: transform 4s cubic-bezier(0.15, 0, 0.15, 1); }
-        .pointer { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); width: 30px; height: 40px; background: #ffd700; clip-path: polygon(50% 100%, 0 0, 100% 0); z-index: 10; filter: drop-shadow(0 2px 5px black); }
+        .pointer { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); width: 30px; height: 40px; background: #ffd700; clip-path: polygon(50% 100%, 0 0, 100% 0); z-index: 15; filter: drop-shadow(0 2px 5px black); }
 
         #spin-btn { background: linear-gradient(90deg, #ffd700, #ff8800); color: #000; border: none; padding: 18px; width: 100%; font-weight: 900; border-radius: 16px; cursor: pointer; text-transform: uppercase; font-size: 16px; margin-top: 20px; }
         #spin-btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -46,7 +43,7 @@
             <canvas id="wheel"></canvas>
         </div>
 
-        <div class="result-display" id="result-text">10 СЕКТОРІВ — УДАЧІ!</div>
+        <div class="result-display" id="result-text">УДАЧІ!</div>
 
         <select id="bet-amount">
             <option value="0.01">СТАВКА: 0.01 TON</option>
@@ -61,6 +58,7 @@
         let userName = (tg.initDataUnsafe && tg.initDataUnsafe.user) ? (tg.initDataUnsafe.user.username || tg.initDataUnsafe.user.first_name) : "Гравець";
         let balance = 0;
         let isSpinning = false;
+        let currentRotation = 0;
 
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://leslav2025.github.io/Uasprint/tonconnect-manifest.json',
@@ -76,7 +74,6 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        // 10 секторів (3 нулі)
         const sectors = [
             { label: "0", color: "#1a2235", win: 0 },
             { label: "200", color: "#ff8800", win: 200 },
@@ -96,22 +93,30 @@
 
         function drawWheel() {
             const arc = (Math.PI * 2) / sectors.length;
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Очищення перед малюванням
+            
             sectors.forEach((s, i) => {
                 const angle = i * arc;
                 ctx.fillStyle = s.color;
-                ctx.beginPath(); ctx.moveTo(140, 140);
-                ctx.arc(140, 140, 140, angle, angle + arc);
+                ctx.beginPath();
+                ctx.moveTo(140, 140);
+                ctx.arc(140, 140, 135, angle, angle + arc);
                 ctx.fill();
-                ctx.strokeStyle = "rgba(255,255,255,0.1)"; ctx.stroke();
+                ctx.strokeStyle = "rgba(255,255,255,0.2)";
+                ctx.stroke();
                 
                 ctx.save();
-                ctx.translate(140 + Math.cos(angle + arc/2) * 100, 140 + Math.sin(angle + arc/2) * 100);
-                ctx.rotate(angle + arc/2 + Math.PI/2);
-                ctx.fillStyle = "white"; ctx.font = "bold 14px Arial";
-                ctx.fillText(s.label, -ctx.measureText(s.label).width/2, 0);
+                ctx.translate(140, 140);
+                ctx.rotate(angle + arc / 2);
+                ctx.fillStyle = "white";
+                ctx.font = "bold 16px Arial";
+                ctx.textAlign = "right";
+                ctx.fillText(s.label, 120, 5);
                 ctx.restore();
             });
         }
+
+        // Малюємо колесо відразу
         drawWheel();
 
         async function loadData() {
@@ -121,7 +126,7 @@
         }
 
         async function playWheel() {
-            if (!tonConnectUI.connected || isSpinning) return alert("Підключіть гаманець!");
+            if (!tonConnectUI.connected || isSpinning) return;
             const bet = parseFloat(document.getElementById('bet-amount').value);
 
             try {
@@ -138,33 +143,42 @@
 
                 isSpinning = true;
                 document.getElementById('spin-btn').disabled = true;
-                document.getElementById('result-text').innerText = "Удачі...";
+                document.getElementById('result-text').innerText = "Крутимо...";
                 
-                const randomSector = Math.floor(Math.random() * sectors.length);
-                const rotation = (360 * 5) + (randomSector * (360 / sectors.length));
+                const randomSectorIndex = Math.floor(Math.random() * sectors.length);
+                const sectorDegrees = 360 / sectors.length;
                 
-                canvas.style.transform = `rotate(-${rotation}deg)`;
+                // Розрахунок кута так, щоб стрілка (вгорі) вказувала на потрібний сектор
+                // Віднімаємо від 360, щоб обертання йшло правильно
+                const stopAngle = (randomSectorIndex * sectorDegrees);
+                currentRotation += (360 * 5) + (360 - stopAngle); 
+                
+                canvas.style.transform = `rotate(${currentRotation}deg)`;
 
                 setTimeout(async () => {
-                    // Вираховуємо реальний індекс після зупинки (враховуючи зміщення Canvas)
-                    const actualIndex = (sectors.length - (randomSector % sectors.length)) % sectors.length;
-                    const prize = sectors[actualIndex].win * (bet === 0.02 ? 2.5 : 1); // Бонус x2.5 за ставку 0.02
+                    const prize = sectors[randomSectorIndex].win * (bet === 0.02 ? 2.5 : 1);
 
                     if (prize > 0) {
                         balance += prize;
-                        document.getElementById('result-text').innerText = `🎉 ВИГРАШ: ${prize} UA!`;
-                        confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+                        document.getElementById('result-text').innerText = `🎉 +${prize} UA!`;
                         await db.collection('users').doc(userName).set({ amount: balance }, { merge: true });
                     } else {
-                        document.getElementById('result-text').innerText = "Зовсім поруч! ☘️";
+                        document.getElementById('result-text').innerText = "0 UA - Спробуйте ще! ☘️";
                     }
+                    
                     isSpinning = false;
                     document.getElementById('spin-btn').disabled = false;
                     loadData();
-                }, 4000);
+                    drawWheel(); // На всяк випадок перемальовуємо
+                }, 4100);
 
-            } catch (e) { console.error(e); }
+            } catch (e) { 
+                console.error(e);
+                isSpinning = false;
+                document.getElementById('spin-btn').disabled = false;
+            }
         }
+        
         loadData();
     </script>
 </body>
