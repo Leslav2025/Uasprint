@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UA CRASH - РАКЕТА</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <style>
+        body { background: #0b101b; color: white; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; padding: 20px; margin: 0; min-height: 100vh; overflow: hidden; }
+        .main { background: linear-gradient(145deg, #151b2b, #1e263d); padding: 25px; border-radius: 24px; width: 100%; max-width: 380px; border: 1px solid #2a3454; text-align: center; position: relative; box-shadow: 0 20px 40px rgba(0,0,0,0.6); }
+        
+        /* Кнопки навігації */
+        .back-link { position: absolute; top: 15px; left: 20px; color: #ffd700; text-decoration: none; font-size: 12px; font-weight: bold; z-index: 10; }
+        .withdraw-link { position: absolute; top: 15px; right: 20px; color: #ffd700; text-decoration: none; font-size: 12px; font-weight: bold; border: 1px solid #ffd700; padding: 4px 8px; border-radius: 8px; z-index: 10; }
+        
+        .game-area { height: 200px; background: rgba(0,0,0,0.3); border-radius: 16px; margin: 20px 0; position: relative; overflow: hidden; border: 1px dashed #2a3454; }
+        .multiplier { font-size: 48px; font-weight: 900; color: #ffd700; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 5; text-shadow: 0 0 20px rgba(255,215,0,0.4); }
+        
+        .rocket { position: absolute; bottom: 20px; left: 20px; font-size: 40px; transition: transform 0.1s linear; display: none; }
+        .rocket.fly { display: block; animation: shake 0.1s infinite; }
+        @keyframes shake { 0% { transform: translate(0,0); } 50% { transform: translate(2px, -2px); } 100% { transform: translate(0,0); } }
+
+        #action-btn { background: #4caf50; color: white; border: none; padding: 18px; width: 100%; font-weight: 900; border-radius: 16px; cursor: pointer; text-transform: uppercase; font-size: 18px; display: none; box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4); }
+        #start-btn { background: linear-gradient(90deg, #ff4b2b, #ff416c); color: white; border: none; padding: 18px; width: 100%; font-weight: 900; border-radius: 16px; cursor: pointer; text-transform: uppercase; font-size: 16px; }
+        
+        .info-box { font-size: 14px; margin-bottom: 10px; opacity: 0.8; margin-top: 20px; }
+        select { background: #0b101b; color: #ffd700; border: 1px solid #2a3454; padding: 12px; border-radius: 12px; width: 100%; font-weight: bold; margin-bottom: 15px; outline: none; }
+    </style>
+</head>
+<body>
+    <div class="main">
+        <a href="index.html" class="back-link">← НАЗАД</a>
+        <a href="withdraw.html" class="withdraw-link">💳 ВИВІД</a>
+        
+        <div id="ton-connect" style="display: flex; justify-content: center; margin-bottom: 15px; margin-top: 20px;"></div>
+        
+        <div style="font-size: 24px; font-weight: 900; color: #ff4b2b;">UA CRASH</div>
+        <div class="info-box">Баланс: <span id="user-balance" style="color:#ffd700">...</span> UA</div>
+
+        <div class="game-area">
+            <div id="multiplier" class="multiplier">x1.00</div>
+            <div id="rocket" class="rocket">🚀</div>
+        </div>
+
+        <select id="bet-amount">
+            <option value="0.01">СТАВКА: 0.01 TON</option>
+            <option value="0.02">СТАВКА: 0.02 TON</option>
+        </select>
+
+        <button id="start-btn" onclick="startGame()">ЗАПУСТИТИ РАКЕТУ</button>
+        <button id="action-btn" onclick="cashOut()">ЗАБРАТИ UA</button>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        let userName = (tg.initDataUnsafe && tg.initDataUnsafe.user) ? (tg.initDataUnsafe.user.username || tg.initDataUnsafe.user.first_name) : "Гравець";
+        
+        let balance = 0;
+        let currentMult = 1.0;
+        let crashPoint = 0;
+        let gameInterval;
+        let isRunning = false;
+
+        const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+            manifestUrl: 'https://leslav2025.github.io/Uasprint/tonconnect-manifest.json',
+            buttonRootId: 'ton-connect'
+        });
+
+        const firebaseConfig = { 
+            apiKey: "AIzaSyAYt_bjoLkBBE6LRTKgvbncm_O-rM_K16o", 
+            authDomain: "ualottery.firebaseapp.com", 
+            projectId: "ualottery", 
+            appId: "1:960757780790:web:568c021958b4ec8f0d8bd6" 
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        async function loadData() {
+            const doc = await db.collection('users').doc(userName).get();
+            balance = doc.exists ? doc.data().amount : 0;
+            document.getElementById('user-balance').innerText = balance.toLocaleString();
+        }
+
+        async function startGame() {
+            if (!tonConnectUI.connected) return alert("Підключіть гаманець!");
+            const bet = parseFloat(document.getElementById('bet-amount').value);
+
+            try {
+                await tonConnectUI.sendTransaction({
+                    validUntil: Math.floor(Date.now() / 1000) + 300,
+                    messages: [{ address: "EQBrD-UZ8w2tAyxCNjO8lF4ioTwI-ELiQgF7kclC7gM2UOO_", amount: (bet * 1000000000).toString() }]
+                });
+
+                const statsRef = db.collection('stats').doc('global');
+                db.runTransaction(async (t) => {
+                    const d = await t.get(statsRef);
+                    t.set(statsRef, { totalIn: (d.exists ? d.data().totalIn || 0 : 0) + bet }, { merge: true });
+                });
+
+                prepareGame();
+            } catch (e) { console.error(e); }
+        }
+
+        function prepareGame() {
+            isRunning = true;
+            currentMult = 1.0;
+            
+            // Логіка вибуху: більшість ігор закінчуються до x3.0, але є шанс на ікс
+            let rnd = Math.random();
+            if (rnd < 0.1) crashPoint = (1.0 + Math.random() * 0.5).toFixed(2); // Ранній вибух
+            else if (rnd < 0.8) crashPoint = (1.5 + Math.random() * 3).toFixed(2); // Середній політ
+            else crashPoint = (5.0 + Math.random() * 15).toFixed(2); // Джекпот-політ
+
+            document.getElementById('start-btn').style.display = 'none';
+            document.getElementById('action-btn').style.display = 'block';
+            document.getElementById('rocket').style.display = 'block';
+            document.getElementById('rocket').innerText = "🚀";
+            
+            gameInterval = setInterval(updateGame, 100);
+        }
+
+        function updateGame() {
+            currentMult += 0.04; // Швидкість росту
+            document.getElementById('multiplier').innerText = `x${currentMult.toFixed(2)}`;
+            document.getElementById('multiplier').style.color = "#ffd700";
+            
+            let move = (currentMult - 1) * 25;
+            document.getElementById('rocket').style.transform = `translate(${move}px, -${move}px)`;
+
+            if (currentMult >= crashPoint) {
+                crash();
+            } else {
+                const bet = parseFloat(document.getElementById('bet-amount').value);
+                const winUA = Math.floor(currentMult * (bet === 0.01 ? 200 : 450)); // Трохи підняв виграш
+                document.getElementById('action-btn').innerText = `ЗАБРАТИ ${winUA} UA`;
+            }
+        }
+
+        function crash() {
+            clearInterval(gameInterval);
+            isRunning = false;
+            document.getElementById('multiplier').innerText = "BOOM!";
+            document.getElementById('multiplier').style.color = "#ff4b2b";
+            document.getElementById('rocket').innerText = "💥";
+            
+            setTimeout(() => {
+                document.getElementById('start-btn').style.display = 'block';
+                document.getElementById('action-btn').style.display = 'none';
+                document.getElementById('rocket').style.display = 'none';
+            }, 2000);
+        }
+
+        async function cashOut() {
+            if (!isRunning) return;
+            clearInterval(gameInterval);
+            isRunning = false;
+
+            const bet = parseFloat(document.getElementById('bet-amount').value);
+            const winUA = Math.floor(currentMult * (bet === 0.01 ? 200 : 450));
+            
+            balance += winUA;
+            await db.collection('users').doc(userName).set({ amount: balance }, { merge: true });
+            
+            alert(`Успіх! Забрали ${winUA} UA на множнику x${currentMult.toFixed(2)}`);
+            
+            document.getElementById('start-btn').style.display = 'block';
+            document.getElementById('action-btn').style.display = 'none';
+            document.getElementById('rocket').style.display = 'none';
+            loadData();
+        }
+
+        loadData();
+    </script>
+</body>
+</html>
