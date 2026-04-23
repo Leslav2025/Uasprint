@@ -8,29 +8,30 @@
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         body { background: #0b101b; color: white; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; padding: 20px; margin: 0; min-height: 100vh; }
-        .main { background: linear-gradient(145deg, #151b2b, #1e263d); padding: 25px; border-radius: 24px; width: 100%; max-width: 380px; border: 1px solid #2a3454; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.6); position: relative; }
+        .main { background: linear-gradient(145deg, #151b2b, #1e263d); padding: 25px; border-radius: 24px; width: 100%; max-width: 380px; border: 1px solid #2a3454; text-align: center; position: relative; box-shadow: 0 20px 40px rgba(0,0,0,0.6); }
         
         .back-link { position: absolute; top: 15px; left: 20px; color: #ffd700; text-decoration: none; font-size: 12px; font-weight: bold; z-index: 10; }
         .withdraw-link { position: absolute; top: 15px; right: 20px; color: #ffd700; text-decoration: none; font-size: 12px; font-weight: bold; border: 1px solid #ffd700; padding: 4px 8px; border-radius: 8px; z-index: 10; }
         
         .title-dice { font-size: 26px; font-weight: 900; margin: 30px 0 5px 0; color: #ff4b2b; }
         
-        /* КУБИК */
-        .dice-container { height: 120px; display: flex; justify-content: center; align-items: center; margin: 30px 0; }
-        #dice { width: 80px; height: 80px; background: white; border-radius: 15px; display: flex; justify-content: center; align-items: center; font-size: 40px; color: #000; box-shadow: 0 0 20px rgba(255,255,255,0.2); transition: 0.5s; }
-        .roll-anim { animation: roll 0.5s infinite; }
-        @keyframes roll { 0% { transform: rotate(0deg); } 25% { transform: rotate(90deg) scale(1.1); } 50% { transform: rotate(180deg); } 75% { transform: rotate(270deg) scale(1.1); } 100% { transform: rotate(360deg); } }
-
-        #roll-btn { background: #ff4b2b; color: white; border: none; padding: 18px; width: 100%; font-weight: 900; border-radius: 16px; cursor: pointer; text-transform: uppercase; font-size: 16px; box-shadow: 0 5px 15px rgba(255, 75, 43, 0.3); }
-        #roll-btn:disabled { opacity: 0.5; }
-
-        .info-box { font-size: 14px; margin-bottom: 10px; opacity: 0.8; margin-top: 20px; }
-        select { background: #0b101b; color: #ffd700; border: 1px solid #2a3454; padding: 12px; border-radius: 12px; width: 100%; font-weight: bold; margin-bottom: 15px; outline: none; }
+        .dice-container { height: 120px; display: flex; justify-content: center; align-items: center; margin: 20px 0; }
+        #dice { width: 80px; height: 80px; background: white; border-radius: 15px; display: flex; justify-content: center; align-items: center; font-size: 45px; color: #000; box-shadow: 0 0 30px rgba(255,255,255,0.1); transition: 0.3s transform; }
         
-        .multiplier-info { font-size: 11px; opacity: 0.6; margin-top: 10px; }
+        .roll-anim { animation: roll 0.6s infinite; }
+        @keyframes roll { 0% { transform: rotate(0); } 50% { transform: rotate(180deg) scale(1.1); } 100% { transform: rotate(360deg); } }
+
+        .mode-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .mode-btn { background: #1a2235; border: 1px solid #2a3454; color: white; padding: 12px; border-radius: 12px; cursor: pointer; font-weight: bold; }
+        .mode-btn.active { background: #ff4b2b; border-color: #ff4b2b; box-shadow: 0 0 10px rgba(255,75,43,0.3); }
+
+        #roll-btn { background: linear-gradient(90deg, #ff4b2b, #ff416c); color: white; border: none; padding: 18px; width: 100%; font-weight: 900; border-radius: 16px; cursor: pointer; text-transform: uppercase; font-size: 16px; }
+        #roll-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        select { background: #0b101b; color: #ffd700; border: 1px solid #2a3454; padding: 12px; border-radius: 12px; width: 100%; font-weight: bold; margin-bottom: 15px; outline: none; }
+        .info-box { font-size: 14px; margin-bottom: 10px; opacity: 0.8; margin-top: 20px; }
     </style>
 </head>
 <body>
@@ -44,7 +45,12 @@
         <div class="info-box">Баланс: <span id="user-balance" style="color:#ffd700">...</span> UA</div>
 
         <div class="dice-container">
-            <div id="dice">🎲</div>
+            <div id="dice">⚀</div>
+        </div>
+
+        <div class="mode-selector">
+            <button class="mode-btn active" id="btn-less" onclick="setMode('less')">МЕНШЕ (1-3)</button>
+            <button class="mode-btn" id="btn-more" onclick="setMode('more')">БІЛЬШЕ (4-6)</button>
         </div>
 
         <select id="bet-amount">
@@ -52,18 +58,18 @@
             <option value="0.02">СТАВКА: 0.02 TON</option>
         </select>
 
-        <button id="roll-btn" onclick="rollDice()">КИНУТИ КУБИК</button>
-
-        <div class="multiplier-info">
-            1-2: 0 UA | 3: x1.5 | 4: x2 | 5: x3 | 6: x5
-        </div>
+        <button id="roll-btn" onclick="playDice()">КИНУТИ КУБИК</button>
+        <p style="font-size: 11px; opacity: 0.5; margin-top: 10px;">Виграш: Ставка x2.0 в UA</p>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
         let userName = (tg.initDataUnsafe && tg.initDataUnsafe.user) ? (tg.initDataUnsafe.user.username || tg.initDataUnsafe.user.first_name) : "Гравець";
+        
         let balance = 0;
+        let currentMode = 'less';
         let isRolling = false;
+        const diceFaces = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
 
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://leslav2025.github.io/Uasprint/tonconnect-manifest.json',
@@ -79,15 +85,20 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        const diceFaces = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
-
         async function loadData() {
             const doc = await db.collection('users').doc(userName).get();
             balance = doc.exists ? doc.data().amount : 0;
             document.getElementById('user-balance').innerText = balance.toLocaleString();
         }
 
-        async function rollDice() {
+        function setMode(mode) {
+            if (isRolling) return;
+            currentMode = mode;
+            document.getElementById('btn-less').classList.toggle('active', mode === 'less');
+            document.getElementById('btn-more').classList.toggle('active', mode === 'more');
+        }
+
+        async function playDice() {
             if (!tonConnectUI.connected || isRolling) return alert("Підключіть гаманець!");
             const bet = parseFloat(document.getElementById('bet-amount').value);
 
@@ -97,48 +108,43 @@
                     messages: [{ address: "EQBrD-UZ8w2tAyxCNjO8lF4ioTwI-ELiQgF7kclC7gM2UOO_", amount: (bet * 1000000000).toString() }]
                 });
 
+                // Статистика
                 const statsRef = db.collection('stats').doc('global');
                 db.runTransaction(async (t) => {
                     const d = await t.get(statsRef);
                     t.set(statsRef, { totalIn: (d.exists ? d.data().totalIn || 0 : 0) + bet }, { merge: true });
                 });
 
-                startRoll(bet);
+                runDiceAnimation(bet);
             } catch (e) { console.error(e); }
         }
 
-        function startRoll(bet) {
+        function runDiceAnimation(bet) {
             isRolling = true;
             document.getElementById('roll-btn').disabled = true;
-            const diceEl = document.getElementById('dice');
-            diceEl.classList.add('roll-anim');
+            const dice = document.getElementById('dice');
+            dice.classList.add('roll-anim');
 
             setTimeout(async () => {
-                diceEl.classList.remove('roll-anim');
-                const result = Math.floor(Math.random() * 6) + 1; // 1 to 6
-                diceEl.innerText = diceFaces[result - 1];
+                dice.classList.remove('roll-anim');
+                const result = Math.floor(Math.random() * 6) + 1; // 1-6
+                dice.innerText = diceFaces[result - 1];
 
-                let winUA = 0;
-                let baseUA = bet === 0.01 ? 100 : 220;
-
-                if (result === 3) winUA = Math.floor(baseUA * 1.5);
-                else if (result === 4) winUA = baseUA * 2;
-                else if (result === 5) winUA = baseUA * 3;
-                else if (result === 6) winUA = baseUA * 5;
-
-                if (winUA > 0) {
-                    balance += winUA;
+                let isWin = (currentMode === 'less' && result <= 3) || (currentMode === 'more' && result >= 4);
+                
+                if (isWin) {
+                    let winAmount = bet === 0.01 ? 400 : 850; // Приблизно x2 в UA
+                    balance += winAmount;
                     await db.collection('users').doc(userName).set({ amount: balance }, { merge: true });
-                    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-                    tg.showAlert(`Випало ${result}! Ви виграли ${winUA} UA!`);
+                    tg.showAlert(`Випало ${result}! ВИ ВИГРАЛИ ${winAmount} UA! 🎉`);
                 } else {
-                    tg.showAlert(`Випало ${result}. Не пощастило, спробуйте ще!`);
+                    tg.showAlert(`Випало ${result}. На жаль, програш. Спробуйте ще!`);
                 }
 
                 isRolling = false;
                 document.getElementById('roll-btn').disabled = false;
                 loadData();
-            }, 1500);
+            }, 1200);
         }
 
         loadData();
