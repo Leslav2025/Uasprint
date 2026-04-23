@@ -12,31 +12,35 @@
         body { background: #0b101b; color: white; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; padding: 20px; margin: 0; min-height: 100vh; }
         .main { background: linear-gradient(145deg, #151b2b, #1e263d); padding: 25px; border-radius: 24px; width: 100%; max-width: 380px; border: 1px solid #2a3454; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.6); position: relative; }
         
-        .back-link { position: absolute; top: 15px; left: 20px; color: #ffd700; text-decoration: none; font-size: 12px; font-weight: bold; z-index: 10; }
-        .withdraw-link { position: absolute; top: 15px; right: 20px; color: #ffd700; text-decoration: none; font-size: 12px; font-weight: bold; border: 1px solid #ffd700; padding: 4px 8px; border-radius: 8px; z-index: 10; }
+        .nav-links { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        .nav-btn { color: #ffd700; text-decoration: none; font-size: 12px; font-weight: bold; border: 1px solid #ffd700; padding: 5px 10px; border-radius: 8px; }
         
-        .title-wheel { font-size: 26px; font-weight: 900; margin: 30px 0 5px 0; background: linear-gradient(90deg, #ffd700, #ff8800); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .title-wheel { font-size: 26px; font-weight: 900; margin: 10px 0 5px 0; background: linear-gradient(90deg, #ffd700, #ff8800); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .balance-box { background: rgba(255,215,0,0.1); padding: 12px; border-radius: 15px; border: 1px solid #ffd700; margin: 15px 0; font-size: 22px; color: #ffd700; font-weight: bold; }
         
         .wheel-container { position: relative; width: 280px; height: 280px; margin: 20px auto; display: flex; justify-content: center; align-items: center; }
         #wheel { width: 100%; height: 100%; border-radius: 50%; border: 4px solid #2a3454; transition: transform 4s cubic-bezier(0.15, 0, 0.15, 1); }
         .pointer { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); width: 30px; height: 40px; background: #ffd700; clip-path: polygon(50% 100%, 0 0, 100% 0); z-index: 15; filter: drop-shadow(0 2px 5px black); }
 
-        #spin-btn { background: linear-gradient(90deg, #ffd700, #ff8800); color: #000; border: none; padding: 18px; width: 100%; font-weight: 900; border-radius: 16px; cursor: pointer; text-transform: uppercase; font-size: 16px; margin-top: 20px; }
+        #spin-btn { background: linear-gradient(90deg, #ffd700, #ff8800); color: #000; border: none; padding: 18px; width: 100%; font-weight: 900; border-radius: 16px; cursor: pointer; text-transform: uppercase; font-size: 16px; margin-top: 10px; }
         #spin-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
         .result-display { margin-top: 15px; font-size: 18px; font-weight: bold; color: #ffd700; min-height: 24px; }
-        select { background: #0b101b; color: #ffd700; border: 1px solid #2a3454; padding: 12px; border-radius: 12px; width: 100%; font-weight: bold; margin-top: 15px; outline: none; }
+        select { background: #1a2235; color: white; border: 1px solid #2a3454; padding: 12px; border-radius: 12px; width: 100%; font-weight: bold; margin-top: 10px; outline: none; }
+        .btn-deposit { background: transparent; color: #4caf50; border: 1px solid #4caf50; font-size: 11px; margin-top: 15px; padding: 10px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
     <div class="main">
-        <a href="index.html" class="back-link">← НАЗАД</a>
-        <a href="withdraw.html" class="withdraw-link">💳 ВИВІД</a>
+        <div class="nav-links">
+            <a href="index.html" class="nav-btn">← ХАБ</a>
+            <a href="withdraw.html" class="nav-btn">ВИВІД 💳</a>
+        </div>
         
-        <div id="ton-connect" style="display: flex; justify-content: center; margin-bottom: 15px; margin-top: 20px;"></div>
+        <div id="ton-connect" style="display: flex; justify-content: center; margin-bottom: 10px;"></div>
         
         <div class="title-wheel">UA WHEEL</div>
-        <div style="font-size: 14px; opacity: 0.8;">Баланс: <span id="user-balance" style="color:#ffd700">...</span> UA</div>
+        <div class="balance-box"><span id="user-balance">0</span> UA</div>
 
         <div class="wheel-container">
             <div class="pointer"></div>
@@ -46,11 +50,14 @@
         <div class="result-display" id="result-text">УДАЧІ!</div>
 
         <select id="bet-amount">
-            <option value="0.01">СТАВКА: 0.01 TON</option>
-            <option value="0.02">СТАВКА: 0.02 TON</option>
+            <option value="100">СТАВКА: 100 UA</option>
+            <option value="200">СТАВКА: 200 UA</option>
+            <option value="500">СТАВКА: 500 UA</option>
         </select>
 
         <button id="spin-btn" onclick="playWheel()">КРУТИТИ КОЛЕСО</button>
+        
+        <button class="btn-deposit" onclick="buyUA()">➕ КУПИТИ 5000 UA (0.01 TON)</button>
     </div>
 
     <script>
@@ -71,20 +78,20 @@
             projectId: "ualottery", 
             appId: "1:960757780790:web:568c021958b4ec8f0d8bd6" 
         };
-        firebase.initializeApp(firebaseConfig);
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
         const sectors = [
-            { label: "0", color: "#1a2235", win: 0 },
-            { label: "200", color: "#ff8800", win: 200 },
-            { label: "0", color: "#1a2235", win: 0 },
-            { label: "500", color: "#4caf50", win: 500 },
-            { label: "100", color: "#0057b7", win: 100 },
-            { label: "0", color: "#1a2235", win: 0 },
-            { label: "300", color: "#ffd700", win: 300 },
-            { label: "800", color: "#9c27b0", win: 800 },
-            { label: "150", color: "#ff4b2b", win: 150 },
-            { label: "JACK", color: "#ff416c", win: 3000 }
+            { label: "x0", color: "#1a2235", mult: 0 },
+            { label: "x2", color: "#ff8800", mult: 2 },
+            { label: "x0", color: "#1a2235", mult: 0 },
+            { label: "x5", color: "#4caf50", mult: 5 },
+            { label: "x1.5", color: "#0057b7", mult: 1.5 },
+            { label: "x0", color: "#1a2235", mult: 0 },
+            { label: "x3", color: "#ffd700", mult: 3 },
+            { label: "x8", color: "#9c27b0", mult: 8 },
+            { label: "x0.5", color: "#ff4b2b", mult: 0.5 },
+            { label: "JACK", color: "#ff416c", mult: 20 }
         ];
 
         const canvas = document.getElementById('wheel');
@@ -93,7 +100,7 @@
 
         function drawWheel() {
             const arc = (Math.PI * 2) / sectors.length;
-            ctx.clearRect(0, 0, canvas.width, canvas.height); // Очищення перед малюванням
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
             
             sectors.forEach((s, i) => {
                 const angle = i * arc;
@@ -109,74 +116,84 @@
                 ctx.translate(140, 140);
                 ctx.rotate(angle + arc / 2);
                 ctx.fillStyle = "white";
-                ctx.font = "bold 16px Arial";
+                ctx.font = "bold 14px Arial";
                 ctx.textAlign = "right";
-                ctx.fillText(s.label, 120, 5);
+                ctx.fillText(s.label, 125, 5);
                 ctx.restore();
             });
         }
 
-        // Малюємо колесо відразу
         drawWheel();
 
         async function loadData() {
             const doc = await db.collection('users').doc(userName).get();
-            balance = doc.exists ? doc.data().amount : 0;
+            balance = doc.exists ? (doc.data().amount || 0) : 0;
             document.getElementById('user-balance').innerText = balance.toLocaleString();
         }
 
         async function playWheel() {
-            if (!tonConnectUI.connected || isSpinning) return;
-            const bet = parseFloat(document.getElementById('bet-amount').value);
+            if (isSpinning) return;
+            const bet = parseInt(document.getElementById('bet-amount').value);
+            
+            if (balance < bet) return tg.showAlert("Мало UA на балансі!");
 
-            try {
-                await tonConnectUI.sendTransaction({
-                    validUntil: Math.floor(Date.now() / 1000) + 300,
-                    messages: [{ address: "EQBrD-UZ8w2tAyxCNjO8lF4ioTwI-ELiQgF7kclC7gM2UOO_", amount: (bet * 1000000000).toString() }]
-                });
+            // Списуємо ставку
+            balance -= bet;
+            await db.collection('users').doc(userName).set({ amount: balance }, { merge: true });
+            document.getElementById('user-balance').innerText = balance.toLocaleString();
 
-                const statsRef = db.collection('stats').doc('global');
-                db.runTransaction(async (t) => {
-                    const d = await t.get(statsRef);
-                    t.set(statsRef, { totalIn: (d.exists ? d.data().totalIn || 0 : 0) + bet }, { merge: true });
-                });
+            isSpinning = true;
+            document.getElementById('spin-btn').disabled = true;
+            document.getElementById('result-text').innerText = "Крутимо...";
+            
+            const randomSectorIndex = Math.floor(Math.random() * sectors.length);
+            const sectorDegrees = 360 / sectors.length;
+            
+            const stopAngle = (randomSectorIndex * sectorDegrees);
+            currentRotation += (360 * 5) + (360 - stopAngle); 
+            
+            canvas.style.transform = `rotate(${currentRotation}deg)`;
 
-                isSpinning = true;
-                document.getElementById('spin-btn').disabled = true;
-                document.getElementById('result-text').innerText = "Крутимо...";
+            setTimeout(async () => {
+                const win = Math.floor(bet * sectors[randomSectorIndex].mult);
+
+                if (win > 0) {
+                    balance += win;
+                    document.getElementById('result-text').innerText = `🎉 +${win} UA!`;
+                    document.getElementById('result-text').style.color = "#4caf50";
+                    await db.collection('users').doc(userName).set({ amount: balance }, { merge: true });
+                } else {
+                    document.getElementById('result-text').innerText = "0 UA - Спробуйте ще! ☘️";
+                    document.getElementById('result-text').style.color = "#ff4b2b";
+                }
                 
-                const randomSectorIndex = Math.floor(Math.random() * sectors.length);
-                const sectorDegrees = 360 / sectors.length;
-                
-                // Розрахунок кута так, щоб стрілка (вгорі) вказувала на потрібний сектор
-                // Віднімаємо від 360, щоб обертання йшло правильно
-                const stopAngle = (randomSectorIndex * sectorDegrees);
-                currentRotation += (360 * 5) + (360 - stopAngle); 
-                
-                canvas.style.transform = `rotate(${currentRotation}deg)`;
-
-                setTimeout(async () => {
-                    const prize = sectors[randomSectorIndex].win * (bet === 0.02 ? 2.5 : 1);
-
-                    if (prize > 0) {
-                        balance += prize;
-                        document.getElementById('result-text').innerText = `🎉 +${prize} UA!`;
-                        await db.collection('users').doc(userName).set({ amount: balance }, { merge: true });
-                    } else {
-                        document.getElementById('result-text').innerText = "0 UA - Спробуйте ще! ☘️";
-                    }
-                    
-                    isSpinning = false;
-                    document.getElementById('spin-btn').disabled = false;
-                    loadData();
-                    drawWheel(); // На всяк випадок перемальовуємо
-                }, 4100);
-
-            } catch (e) { 
-                console.error(e);
                 isSpinning = false;
                 document.getElementById('spin-btn').disabled = false;
-            }
+                loadData();
+            }, 4100);
+        }
+
+        async function buyUA() {
+            if(!tonConnectUI.connected) return tg.showAlert("Підключіть гаманець!");
+            try {
+                const result = await tonConnectUI.sendTransaction({
+                    validUntil: Math.floor(Date.now() / 1000) + 300,
+                    messages: [{ address: "EQBrD-UZ8w2tAyxCNjO8lF4ioTwI-ELiQgF7kclC7gM2UOO_", amount: "10000000" }]
+                });
+                if(result) {
+                    balance += 5000;
+                    await db.collection('users').doc(userName).set({ amount: balance }, { merge: true });
+                    
+                    const statsRef = db.collection('stats').doc('global');
+                    db.runTransaction(async (t) => {
+                        const d = await t.get(statsRef);
+                        t.set(statsRef, { totalIn: (d.exists ? d.data().totalIn || 0 : 0) + 0.01 }, { merge: true });
+                    });
+                    
+                    loadData();
+                    tg.showAlert("✅ Нараховано 5000 UA!");
+                }
+            } catch(e) { console.error(e); }
         }
         
         loadData();
