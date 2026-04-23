@@ -11,9 +11,9 @@
         :root { --gold: #ffd700; --bg: #0b101b; --card: #151b2b; --text: #ffffff; }
         body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; padding: 12px; overflow-x: hidden; }
         
-        /* ВЕРХНЯ ПАНЕЛЬ: БАЛАНС ТА ОНЛАЙН */
+        /* ВЕРХНЯ ПАНЕЛЬ */
         .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .online-count { font-size: 10px; color: #4caf50; font-weight: bold; text-transform: uppercase; }
+        .online-count { font-size: 10px; color: #4caf50; font-weight: bold; }
         .user-balance { background: rgba(255,215,0,0.1); border: 1px solid var(--gold); padding: 4px 12px; border-radius: 20px; color: var(--gold); font-weight: 900; }
 
         /* БЛОК СТАТИСТИКИ */
@@ -23,10 +23,11 @@
             grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;
         }
         .stat-item { text-align: center; }
-        .stat-label { font-size: 9px; opacity: 0.6; text-transform: uppercase; display: block; margin-bottom: 2px; }
-        .stat-value { font-size: 14px; font-weight: bold; color: var(--gold); }
+        .stat-item:first-child { border-right: 1px solid rgba(255,215,0,0.1); }
+        .stat-label { font-size: 8px; opacity: 0.6; text-transform: uppercase; display: block; margin-bottom: 2px; }
+        .stat-value { font-size: 13px; font-weight: bold; color: var(--gold); }
 
-        /* КОМПАКТНА СІТКА ІГОР */
+        /* СІТКА ІГОР (3 в ряд) */
         .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
         .game-card { 
             background: var(--card); border: 1px solid rgba(255, 215, 0, 0.1); 
@@ -35,87 +36,54 @@
         }
         .game-card:active { transform: scale(0.95); border-color: var(--gold); }
         .game-icon { font-size: 24px; margin-bottom: 5px; }
-        .game-name { font-weight: bold; font-size: 10px; text-transform: uppercase; white-space: nowrap; }
-        .game-status { font-size: 8px; color: var(--gold); margin-top: 3px; opacity: 0.8; }
+        .game-name { font-weight: bold; font-size: 9px; text-transform: uppercase; }
 
         /* БАНЕР ПАРТНЕРКИ */
         .partner-banner {
             background: linear-gradient(90deg, #1a2a4a, #151b2b);
             border: 1px solid var(--gold); border-radius: 15px; padding: 15px;
-            text-decoration: none; color: white; display: flex; align-items: center;
-            justify-content: space-between;
+            text-decoration: none; color: white; display: flex; align-items: center; justify-content: space-between;
         }
         .partner-info h3 { margin: 0; color: var(--gold); font-size: 14px; }
         .partner-info p { margin: 3px 0 0; font-size: 10px; opacity: 0.7; }
-
-        .footer { text-align: center; margin-top: 20px; font-size: 10px; opacity: 0.4; padding-bottom: 10px; }
     </style>
 </head>
 <body>
 
     <div class="top-bar">
-        <div class="online-count">● <span id="online-val">...</span> ГРАВЦІВ ОНЛАЙН</div>
+        <div class="online-count">● <span id="online-val">...</span> ONLINE</div>
         <div class="user-balance"><span id="user-balance">0</span> UA</div>
     </div>
 
     <div class="hub-stats">
         <div class="stat-item">
             <span class="stat-label">ЗАЙШЛО В ПРОЕКТ</span>
-            <span class="stat-value">1,402.50 TON</span>
+            <span class="stat-value" id="stat-ton">0.00 TON</span>
         </div>
         <div class="stat-item">
-            <span class="stat-label">ВИПЛАЧЕНО UA</span>
-            <span class="stat-value">845,200 UA</span>
+            <span class="stat-label">ВИПЛАЧЕНО ГРАВЦЯМ</span>
+            <span class="stat-value" id="stat-ua">0 UA</span>
         </div>
     </div>
 
     <div class="grid">
-        <a href="dice.html" class="game-card">
-            <div class="game-icon">🎲</div>
-            <div class="game-name">UA DICE</div>
-            <div class="game-status">ONLINE</div>
-        </a>
-        <a href="mines.html" class="game-card">
-            <div class="game-icon">💣</div>
-            <div class="game-name">UA MINES</div>
-            <div class="game-status">ONLINE</div>
-        </a>
-        <a href="crash.html" class="game-card">
-            <div class="game-icon">📈</div>
-            <div class="game-name">UA CRASH</div>
-            <div class="game-status">ONLINE</div>
-        </a>
-        <a href="penalty.html" class="game-card">
-            <div class="game-icon">⚽</div>
-            <div class="game-name">PENALTY</div>
-            <div class="game-status">NEW</div>
-        </a>
-        <a href="wheel.html" class="game-card">
-            <div class="game-icon">🎡</div>
-            <div class="game-name">WHEEL</div>
-            <div class="game-status">ONLINE</div>
-        </a>
-        <a href="lottery.html" class="game-card">
-            <div class="game-icon">🎫</div>
-            <div class="game-name">LOTTERY</div>
-            <div class="game-status">LIVE</div>
-        </a>
+        <a href="dice.html" class="game-card"><div class="game-icon">🎲</div><div class="game-name">UA DICE</div></a>
+        <a href="mines.html" class="game-card"><div class="game-icon">💣</div><div class="game-name">MINES</div></a>
+        <a href="crash.html" class="game-card"><div class="game-icon">📈</div><div class="game-name">CRASH</div></a>
+        <a href="penalty.html" class="game-card"><div class="game-icon">⚽</div><div class="game-name">PENALTY</div></a>
+        <a href="wheel.html" class="game-card"><div class="game-icon">🎡</div><div class="game-name">WHEEL</div></a>
+        <a href="lottery.html" class="game-card"><div class="game-icon">🎫</div><div class="game-name">LOTTERY</div></a>
     </div>
 
     <a href="partner.ntml" class="partner-banner">
         <div class="partner-info">
             <h3>ВЛАСНЕ КАЗИНО 🚀</h3>
-            <p>Отримуй 90% від ставок гравців</p>
+            <p>Стань партнером та заробляй</p>
         </div>
         <div style="font-size: 24px;">💰</div>
     </a>
 
-    <div class="footer">
-        © 2026 UA GOLDEN HUB. All rights reserved.
-    </div>
-
     <script>
-        // Ініціалізація Firebase (використовуй свій конфіг)
         const firebaseConfig = { 
             apiKey: "AIzaSyAYt_bjoLkBBE6LRTKgvbncm_O-rM_K16o", 
             authDomain: "ualottery.firebaseapp.com", 
@@ -129,17 +97,28 @@
 
         const userId = tg.initDataUnsafe.user ? tg.initDataUnsafe.user.id.toString() : "guest";
 
-        // Завантаження балансу користувача
-        async function loadBalance() {
-            const doc = await db.collection('users').doc(userId).get();
-            if (doc.exists) {
-                document.getElementById('user-balance').innerText = doc.data().balance || 0;
+        async function loadAllData() {
+            // 1. Баланс користувача
+            const userDoc = await db.collection('users').doc(userId).get();
+            if (userDoc.exists) {
+                document.getElementById('user-balance').innerText = userDoc.data().balance || 0;
+            } else {
+                await db.collection('users').doc(userId).set({ balance: 0 });
+            }
+
+            // 2. Глобальна статистика хабу
+            const statsDoc = await db.collection('global_stats').doc('counters').get();
+            if (statsDoc.exists) {
+                const s = statsDoc.data();
+                document.getElementById('stat-ton').innerText = (s.total_ton_in || 0).toFixed(2) + " TON";
+                document.getElementById('stat-ua').innerText = (s.total_ua_out || 0).toLocaleString() + " UA";
             }
         }
-        loadBalance();
 
-        // Рандомний лічильник онлайн (від 100 до 250)
-        document.getElementById('online-val').innerText = Math.floor(Math.random() * (250 - 100 + 1)) + 100;
+        loadAllData();
+        
+        // Імітація онлайну
+        document.getElementById('online-val').innerText = Math.floor(Math.random() * (220 - 110) + 110);
     </script>
 </body>
 </html>
