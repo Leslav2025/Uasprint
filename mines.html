@@ -10,21 +10,33 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <style>
         body { background: #0b101b; color: white; font-family: 'Segoe UI', sans-serif; text-align: center; margin: 0; padding: 20px; }
-        .main { background: linear-gradient(145deg, #151b2b, #1e263d); padding: 25px; border-radius: 24px; max-width: 360px; margin: auto; border: 1px solid #2a3454; box-shadow: 0 15px 35px rgba(0,0,0,0.5); }
+        .main { background: linear-gradient(145deg, #151b2b, #1e263d); padding: 25px; border-radius: 24px; max-width: 360px; margin: auto; border: 1px solid #2a3454; position: relative; }
+        
+        /* КНОПКИ НАВІГАЦІЇ */
+        .nav-links { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        .nav-btn { color: #ffd700; text-decoration: none; font-size: 12px; font-weight: bold; border: 1px solid #ffd700; padding: 5px 10px; border-radius: 8px; }
+
         .balance-box { background: rgba(255,215,0,0.1); padding: 15px; border-radius: 18px; border: 1px solid #ffd700; margin: 15px 0; font-size: 24px; color: #ffd700; font-weight: 900; }
         .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin: 20px 0; }
-        .cell { aspect-ratio: 1; background: #1a2235; border-radius: 12px; border: 1px solid #2a3454; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; transition: 0.2s; }
-        .cell.open { background: #2a3454; cursor: default; border-color: #ffd700; }
+        .cell { aspect-ratio: 1; background: #1a2235; border-radius: 12px; border: 1px solid #2a3454; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; }
+        .cell.open { background: #2a3454; border-color: #ffd700; }
+
         .controls { display: flex; flex-direction: column; gap: 12px; }
-        button { padding: 18px; border-radius: 16px; border: none; font-weight: 900; cursor: pointer; text-transform: uppercase; font-size: 16px; }
+        button { padding: 18px; border-radius: 16px; border: none; font-weight: 900; cursor: pointer; text-transform: uppercase; font-size: 14px; }
         #start-btn { background: #ffd700; color: #000; }
         #cashout-btn { background: #28a745; color: white; display: none; }
-        .warning-text { color: #ff4b2b; font-size: 11px; font-weight: bold; margin-top: 10px; }
+        
+        .btn-deposit { background: transparent; color: #4caf50; border: 1px solid #4caf50; margin-top: 15px; }
+        .warning { color: #ff4b2b; font-size: 10px; margin-top: 10px; font-weight: bold; }
     </style>
 </head>
 <body>
     <div class="main">
-        <a href="index.html" style="color:#ffd700; text-decoration:none; float:left; font-size:12px; font-weight:bold;">← НАЗАД</a>
+        <div class="nav-links">
+            <a href="index.html" class="nav-btn">← ХАБ</a>
+            <a href="withdraw.html" class="nav-btn">💳 ВИВІД</a>
+        </div>
+
         <div id="ton-connect" style="display:flex; justify-content:center; margin-bottom:10px;"></div>
         
         <div class="balance-box"><span id="user-balance">0</span> UA</div>
@@ -35,9 +47,10 @@
             <button id="start-btn" onclick="startGame()">ГРАТИ (100 UA)</button>
             <button id="cashout-btn" onclick="cashOut()">ЗАБРАТИ: <span id="win-amount">0</span> UA</button>
         </div>
-        
-        <p class="warning-text">⚠️ ОБЕРЕЖНО: ВИБУХ КОШТУЄ -500 UA!</p>
-        <button style="background:transparent; color:#ffd700; border:1px solid #ffd700; font-size:10px; margin-top:15px; padding:8px;" onclick="buyUA()">ПОПОВНИТИ (0.01 TON)</button>
+
+        <p class="warning">⚠️ ВИБУХ: -500 UA ТА СТАВКА!</p>
+
+        <button class="btn-deposit" onclick="buyUA()">⚡ ПОПОВНИТИ 5000 UA (0.01 TON)</button>
     </div>
 
     <script>
@@ -49,7 +62,7 @@
         let mines = [];
         let currentWin = 0;
         const bet = 100;
-        const penalty = 500; // ШТРАФ ЗА ПІДРИВ
+        const penalty = 500;
 
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://leslav2025.github.io/Uasprint/tonconnect-manifest.json',
@@ -71,8 +84,33 @@
             document.getElementById('user-balance').innerText = balance.toLocaleString();
         }
 
+        async function buyUA() {
+            if (!tonConnectUI.connected) return alert("Підключіть гаманець!");
+            try {
+                const result = await tonConnectUI.sendTransaction({
+                    validUntil: Math.floor(Date.now() / 1000) + 300,
+                    messages: [{ address: "EQBrD-UZ8w2tAyxCNjO8lF4ioTwI-ELiQgF7kclC7gM2UOO_", amount: "10000000" }]
+                });
+
+                if (result) {
+                    balance += 5000;
+                    await db.collection('users').doc(userName).set({ amount: balance }, { merge: true });
+                    
+                    // ЗВІТ ДЛЯ АДМІНА (СТАТИСТИКА)
+                    const statsRef = db.collection('stats').doc('global');
+                    db.runTransaction(async (t) => {
+                        const d = await t.get(statsRef);
+                        t.set(statsRef, { totalIn: (d.exists ? d.data().totalIn || 0 : 0) + 0.01 }, { merge: true });
+                    });
+
+                    tg.showAlert("✅ Нараховано 5000 UA! Звіт оновлено.");
+                    loadData();
+                }
+            } catch (e) { console.error(e); }
+        }
+
         async function startGame() {
-            if (balance < (bet + penalty)) return tg.showAlert(`Потрібно мінімум ${bet + penalty} UA для безпеки (ставка + страховка від підриву)!`);
+            if (balance < (bet + penalty)) return tg.showAlert(`Мінімум ${bet + penalty} UA для страховки!`);
             
             balance -= bet;
             await db.collection('users').doc(userName).update({ amount: balance });
@@ -81,10 +119,8 @@
             gameActive = true;
             currentWin = 0;
             mines = Array(25).fill(false);
-            
-            // СТАВИМО 5 МІН
             let mCount = 0;
-            while(mCount < 5) {
+            while(mCount < 5) { // 5 МІН
                 let r = Math.floor(Math.random() * 25);
                 if(!mines[r]) { mines[r] = true; mCount++; }
             }
@@ -112,49 +148,32 @@
             el.classList.add('open');
 
             if (mines[idx]) {
-                // БУМ! МІНУСУЄМО ЩЕ 500
                 el.innerHTML = '💣';
                 gameActive = false;
-                
-                balance -= penalty;
+                balance -= penalty; // ШТРАФ
                 await db.collection('users').doc(userName).update({ amount: balance });
-                
                 document.getElementById('user-balance').innerText = balance.toLocaleString();
                 document.getElementById('start-btn').disabled = false;
                 document.getElementById('cashout-btn').style.display = 'none';
-                
-                tg.showAlert(`💥 БАБАХ! Штраф за підрив: -${penalty} UA.`);
+                tg.showAlert(`💥 БАБАХ! -${penalty} UA.`);
             } else {
                 el.innerHTML = '💎';
-                currentWin += 75; // Підняв виграш за діамант до 75 через високий ризик
+                currentWin += 75; 
                 document.getElementById('win-amount').innerText = currentWin;
             }
         }
 
         async function cashOut() {
             if (!gameActive || currentWin === 0) return;
-            let totalToReturn = currentWin + bet; 
-            balance += totalToReturn;
+            let total = currentWin + bet;
+            balance += total;
             await db.collection('users').doc(userName).update({ amount: balance });
-            tg.showAlert(`💰 Врятувався! Забрав ${totalToReturn} UA.`);
+            tg.showAlert(`💰 Забрано ${total} UA!`);
             gameActive = false;
             document.getElementById('start-btn').disabled = false;
             document.getElementById('cashout-btn').style.display = 'none';
             loadData();
             renderGrid();
-        }
-
-        async function buyUA() {
-            if (!tonConnectUI.connected) return alert("Підключи гаманець!");
-            try {
-                await tonConnectUI.sendTransaction({
-                    validUntil: Math.floor(Date.now() / 1000) + 300,
-                    messages: [{ address: "EQBrD-UZ8w2tAyxCNjO8lF4ioTwI-ELiQgF7kclC7gM2UOO_", amount: "10000000" }]
-                });
-                balance += 5000;
-                await db.collection('users').doc(userName).set({ amount: balance }, { merge: true });
-                loadData();
-            } catch (e) {}
         }
 
         loadData();
