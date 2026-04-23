@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UA WITHDRAW - ВИВІД КОШТІВ</title>
+    <title>UA WITHDRAW - ПІДТВЕРДЖЕННЯ</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
@@ -11,11 +11,9 @@
     <style>
         body { background: #0b101b; color: white; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; padding: 20px; margin: 0; min-height: 100vh; }
         .main { background: linear-gradient(145deg, #151b2b, #1e263d); padding: 30px; border-radius: 24px; width: 100%; max-width: 380px; border: 1px solid #2a3454; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.6); align-self: center; }
-        
         .icon { font-size: 60px; margin-bottom: 20px; display: block; }
-        h2 { color: #ffd700; margin-bottom: 15px; font-size: 22px; text-transform: uppercase; letter-spacing: 1px; }
+        h2 { color: #ffd700; margin-bottom: 15px; font-size: 22px; }
         p { opacity: 0.8; font-size: 15px; line-height: 1.6; margin-bottom: 25px; }
-
         .btn-send { 
             display: inline-block; 
             background: linear-gradient(90deg, #ffd700, #ff8800); 
@@ -28,33 +26,26 @@
             width: 100%;
             box-sizing: border-box;
             box-shadow: 0 5px 15px rgba(255, 215, 0, 0.3);
-            transition: 0.2s;
+            cursor: pointer;
+            border: none;
         }
-        .btn-send:active { transform: scale(0.97); }
-
-        .btn-back { display: block; margin-top: 20px; color: #ffd700; text-decoration: none; font-size: 13px; font-weight: bold; opacity: 0.6; }
-        
-        #loading-bar { width: 100%; height: 4px; background: #1a2235; border-radius: 2px; margin-bottom: 20px; overflow: hidden; }
-        #loading-fill { width: 30%; height: 100%; background: #ffd700; animation: load 1.5s infinite linear; }
-        @keyframes load { 0% { transform: translateX(-100%); } 100% { transform: translateX(300%); } }
+        .btn-back { display: block; margin-top: 20px; color: #ffd700; text-decoration: none; font-size: 14px; }
     </style>
 </head>
 <body>
     <div class="main">
         <div id="status-ui">
             <span class="icon" id="status-icon">⏳</span>
-            <div id="loading-bar"><div id="loading-fill"></div></div>
-            <h2 id="status-title">ПЕРЕВІРКА...</h2>
-            <p id="status-desc">Синхронізуємо дані з вашим гаманцем та базою UA GOLDEN HUB.</p>
-            
-            <a id="action-btn" href="#" class="btn-send" style="display: none;">ВІДПРАВИТИ ЗАЯВКУ</a>
-            <a href="index.html" class="btn-back" id="back-link">ПОВЕРНУТИСЯ В ХАБ</a>
+            <h2 id="status-title">ОБРОБКА...</h2>
+            <p id="status-desc">Перевіряємо дані вашого балансу.</p>
+            <button id="action-btn" class="btn-send" style="display: none;" onclick="handleWithdrawClick()">ВІДПРАВИТИ ДАНІ</button>
+            <a href="index.html" class="btn-back">НАЗАД В ХАБ</a>
         </div>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
-        let userName = (tg.initDataUnsafe && tg.initDataUnsafe.user) ? (tg.initDataUnsafe.user.username || tg.initDataUnsafe.user.first_name) : "Гравець";
+        let userName = (tg.initDataUnsafe && tg.initDataUnsafe.user) ? (tg.initDataUnsafe.user.username || tg.initDataUnsafe.user.first_name) : "User";
         
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://leslav2025.github.io/Uasprint/tonconnect-manifest.json'
@@ -69,7 +60,9 @@
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        async function processWithdraw() {
+        let finalLink = ""; // Тут буде посилання на бота
+
+        async function process() {
             try {
                 const userRef = db.collection('users').doc(userName);
                 const doc = await userRef.get();
@@ -77,57 +70,53 @@
                 if (doc.exists) {
                     const amount = doc.data().amount || 0;
                     const wallet = tonConnectUI.account ? tonConnectUI.account.address : "Гаманець не підключено";
-                    const MIN_LIMIT = 20000;
 
-                    document.getElementById('loading-bar').style.display = "none";
-
-                    if (amount >= MIN_LIMIT) {
-                        // Текст для бота
-                        const messageText = `🚀 НОВА ЗАЯВКА НА ВИПЛАТУ\n` +
-                                          `---------------------------\n` +
+                    if (amount >= 20000) {
+                        const messageText = `🚀 ЗАЯВКА НА ВИПЛАТУ\n` +
+                                          `-------------------\n` +
                                           `👤 Гравець: @${userName}\n` +
                                           `💰 Сума: ${amount.toLocaleString()} UA\n` +
                                           `💳 Гаманець: ${wallet}\n` +
                                           `🎮 Проект: UA GOLDEN HUB`;
 
-                        const encodedMsg = encodeURIComponent(messageText);
-                        const botLink = `https://t.me/tokenpist_bot?text=${encodedMsg}`;
+                        finalLink = `https://t.me/tokenpist_bot?text=${encodeURIComponent(messageText)}`;
 
-                        // ОБНУЛЯЄМО БАЛАНС ПЕРЕД ВИВОДОМ
+                        // 1. СПИСУЄМО БАЛАНС В БАЗІ ОДРАЗУ
                         await userRef.update({ amount: 0 });
 
-                        // Оновлення інтерфейсу на "Успіх"
+                        // 2. ОНОВЛЮЄМО ІНТЕРФЕЙС
                         document.getElementById('status-icon').innerText = "🏦";
-                        document.getElementById('status-title').innerText = "БАЛАНС ПЕРЕВІРЕНО";
-                        document.getElementById('status-desc').innerHTML = `Суму <b>${amount.toLocaleString()} UA</b> зарезервовано для виплати. <br><br>Натисніть кнопку нижче, щоб надіслати дані адміністратору в бот.`;
+                        document.getElementById('status-title').innerText = "БАЛАНС СПИСАНО";
+                        document.getElementById('status-desc').innerHTML = `Суму зарезервовано. Натисніть кнопку нижче, щоб надіслати заявку в бот. Після цього вас поверне в хаб.`;
                         
-                        const btn = document.getElementById('action-btn');
-                        btn.href = botLink;
-                        btn.style.display = "block";
-                        document.getElementById('back-link').style.display = "none";
+                        document.getElementById('action-btn').style.display = "block";
                     } else {
-                        // Якщо грошей замало
                         document.getElementById('status-icon').innerText = "❌";
-                        document.getElementById('status-title').innerText = "НЕДОСТАТНЬО UA";
-                        document.getElementById('status-desc').innerText = `Мінімальний поріг виводу: ${MIN_LIMIT.toLocaleString()} UA. На вашому балансі лише ${amount.toLocaleString()} UA. Продовжуйте перемагати в іграх!`;
-                        
+                        document.getElementById('status-title').innerText = "МАЛО UA";
+                        document.getElementById('status-desc').innerText = "Мінімальний вивід від 20,000 UA.";
                         const btn = document.getElementById('action-btn');
                         btn.innerText = "ГРАТИ ЩЕ";
-                        btn.href = "index.html";
+                        btn.onclick = () => { window.location.href = "index.html"; };
                         btn.style.display = "block";
-                        btn.style.background = "linear-gradient(90deg, #333, #555)";
-                        btn.style.color = "white";
                     }
                 }
-            } catch (e) {
-                console.error(e);
-                document.getElementById('status-title').innerText = "ПОМИЛКА";
-                document.getElementById('status-desc').innerText = "Помилка зв'язку з сервером. Спробуйте пізніше.";
+            } catch (e) { console.error(e); }
+        }
+
+        // Функція, яка спрацьовує при кліку на кнопку
+        function handleWithdrawClick() {
+            if (finalLink) {
+                // Відкриваємо посилання на бота
+                window.open(finalLink, '_blank');
+                
+                // ЧЕРЕЗ 1 СЕКУНДУ ПРИМУСОВО ПЕРЕКИДАЄМО НА ГОЛОВНУ
+                setTimeout(() => {
+                    window.location.href = "index.html";
+                }, 1000);
             }
         }
 
-        // Чекаємо трохи, щоб TON Connect встиг ініціалізуватися
-        setTimeout(processWithdraw, 1500);
+        setTimeout(process, 1000);
     </script>
 </body>
 </html>
