@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UA WHEEL - 10 СЕКТОРІВ</title>
+    <title>UA WHEEL - КОЛЕСО</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
@@ -12,19 +12,20 @@
     <style>
         body { background: #0b101b; color: white; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; padding: 20px; margin: 0; min-height: 100vh; }
         .main { background: linear-gradient(145deg, #151b2b, #1e263d); padding: 25px; border-radius: 24px; width: 100%; max-width: 380px; border: 1px solid #2a3454; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.6); position: relative; }
-        .back-link { position: absolute; top: 15px; left: 20px; color: #ffd700; text-decoration: none; font-size: 12px; font-weight: bold; z-index: 10; }
         
-        .title-wheel { font-size: 26px; font-weight: 900; margin: 25px 0 5px 0; background: linear-gradient(90deg, #ffd700, #ff8800); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        #balance-box { font-size: 14px; margin-bottom: 10px; opacity: 0.8; }
-
+        /* Навігація */
+        .back-link { position: absolute; top: 15px; left: 20px; color: #ffd700; text-decoration: none; font-size: 12px; font-weight: bold; z-index: 10; }
+        .withdraw-link { position: absolute; top: 15px; right: 20px; color: #ffd700; text-decoration: none; font-size: 12px; font-weight: bold; border: 1px solid #ffd700; padding: 4px 8px; border-radius: 8px; z-index: 10; }
+        
+        .title-wheel { font-size: 26px; font-weight: 900; margin: 30px 0 5px 0; background: linear-gradient(90deg, #ffd700, #ff8800); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
         /* КОЛЕСО */
         .wheel-container { position: relative; width: 280px; height: 280px; margin: 20px auto; }
-        #wheel { width: 100%; height: 100%; border-radius: 50%; border: 4px solid #2a3454; transition: transform 4s cubic-bezier(0.15, 0, 0.15, 1); box-shadow: 0 0 30px rgba(255, 215, 0, 0.1); }
-        
+        #wheel { width: 100%; height: 100%; border-radius: 50%; border: 4px solid #2a3454; transition: transform 4s cubic-bezier(0.15, 0, 0.15, 1); }
         .pointer { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); width: 30px; height: 40px; background: #ffd700; clip-path: polygon(50% 100%, 0 0, 100% 0); z-index: 10; filter: drop-shadow(0 2px 5px black); }
 
-        #spin-btn { background: linear-gradient(90deg, #ffd700, #ff8800); color: #000; border: none; padding: 18px; width: 100%; font-weight: 900; border-radius: 16px; cursor: pointer; text-transform: uppercase; font-size: 16px; margin-top: 20px; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3); }
-        #spin-btn:disabled { opacity: 0.5; }
+        #spin-btn { background: linear-gradient(90deg, #ffd700, #ff8800); color: #000; border: none; padding: 18px; width: 100%; font-weight: 900; border-radius: 16px; cursor: pointer; text-transform: uppercase; font-size: 16px; margin-top: 20px; }
+        #spin-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
         .result-display { margin-top: 15px; font-size: 18px; font-weight: bold; color: #ffd700; min-height: 24px; }
         select { background: #0b101b; color: #ffd700; border: 1px solid #2a3454; padding: 12px; border-radius: 12px; width: 100%; font-weight: bold; margin-top: 15px; outline: none; }
@@ -33,10 +34,12 @@
 <body>
     <div class="main">
         <a href="index.html" class="back-link">← НАЗАД</a>
-        <div id="ton-connect" style="display: flex; justify-content: center; margin-bottom: 15px;"></div>
+        <a href="withdraw.html" class="withdraw-link">💳 ВИВІД</a>
+        
+        <div id="ton-connect" style="display: flex; justify-content: center; margin-bottom: 15px; margin-top: 20px;"></div>
         
         <div class="title-wheel">UA WHEEL</div>
-        <div id="balance-box">Баланс: <span id="user-balance" style="color:#ffd700">...</span> UA</div>
+        <div style="font-size: 14px; opacity: 0.8;">Баланс: <span id="user-balance" style="color:#ffd700">...</span> UA</div>
 
         <div class="wheel-container">
             <div class="pointer"></div>
@@ -46,15 +49,15 @@
         <div class="result-display" id="result-text">10 СЕКТОРІВ — УДАЧІ!</div>
 
         <select id="bet-amount">
-            <option value="0.01">ГРА: 0.01 TON</option>
-            <option value="0.02">ГРА: 0.02 TON</option>
+            <option value="0.01">СТАВКА: 0.01 TON</option>
+            <option value="0.02">СТАВКА: 0.02 TON</option>
         </select>
 
         <button id="spin-btn" onclick="playWheel()">КРУТИТИ КОЛЕСО</button>
     </div>
 
     <script>
-        const tg = window.Telegram.WebApp; tg.ready(); tg.expand();
+        const tg = window.Telegram.WebApp;
         let userName = (tg.initDataUnsafe && tg.initDataUnsafe.user) ? (tg.initDataUnsafe.user.username || tg.initDataUnsafe.user.first_name) : "Гравець";
         let balance = 0;
         let isSpinning = false;
@@ -73,18 +76,18 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        // КОНФІГУРАЦІЯ 10 СЕКТОРІВ
+        // 10 секторів (3 нулі)
         const sectors = [
             { label: "0", color: "#1a2235", win: 0 },
-            { label: "100", color: "#ff8800", win: 100 },
+            { label: "200", color: "#ff8800", win: 200 },
             { label: "0", color: "#1a2235", win: 0 },
-            { label: "300", color: "#4caf50", win: 300 },
-            { label: "500", color: "#0057b7", win: 500 },
+            { label: "500", color: "#4caf50", win: 500 },
+            { label: "100", color: "#0057b7", win: 100 },
             { label: "0", color: "#1a2235", win: 0 },
-            { label: "200", color: "#ffd700", win: 200 },
-            { label: "400", color: "#9c27b0", win: 400 },
+            { label: "300", color: "#ffd700", win: 300 },
+            { label: "800", color: "#9c27b0", win: 800 },
             { label: "150", color: "#ff4b2b", win: 150 },
-            { label: "JACK", color: "#ff416c", win: 2500 }
+            { label: "JACK", color: "#ff416c", win: 3000 }
         ];
 
         const canvas = document.getElementById('wheel');
@@ -102,9 +105,9 @@
                 ctx.strokeStyle = "rgba(255,255,255,0.1)"; ctx.stroke();
                 
                 ctx.save();
-                ctx.translate(140 + Math.cos(angle + arc/2) * 90, 140 + Math.sin(angle + arc/2) * 90);
+                ctx.translate(140 + Math.cos(angle + arc/2) * 100, 140 + Math.sin(angle + arc/2) * 100);
                 ctx.rotate(angle + arc/2 + Math.PI/2);
-                ctx.fillStyle = "white"; ctx.font = "bold 13px Arial";
+                ctx.fillStyle = "white"; ctx.font = "bold 14px Arial";
                 ctx.fillText(s.label, -ctx.measureText(s.label).width/2, 0);
                 ctx.restore();
             });
@@ -127,7 +130,6 @@
                     messages: [{ address: "EQBrD-UZ8w2tAyxCNjO8lF4ioTwI-ELiQgF7kclC7gM2UOO_", amount: (bet * 1000000000).toString() }]
                 });
 
-                // Статистика TON
                 const statsRef = db.collection('stats').doc('global');
                 db.runTransaction(async (t) => {
                     const d = await t.get(statsRef);
@@ -136,7 +138,7 @@
 
                 isSpinning = true;
                 document.getElementById('spin-btn').disabled = true;
-                document.getElementById('result-text').innerText = "Колесо обертається...";
+                document.getElementById('result-text').innerText = "Удачі...";
                 
                 const randomSector = Math.floor(Math.random() * sectors.length);
                 const rotation = (360 * 5) + (randomSector * (360 / sectors.length));
@@ -144,17 +146,17 @@
                 canvas.style.transform = `rotate(-${rotation}deg)`;
 
                 setTimeout(async () => {
-                    // Розрахунок виграшного сектору (враховуючи зміщення Canvas)
-                    const actualIndex = (sectors.length - randomSector) % sectors.length;
-                    const prize = sectors[actualIndex].win * (bet === 0.02 ? 2 : 1);
+                    // Вираховуємо реальний індекс після зупинки (враховуючи зміщення Canvas)
+                    const actualIndex = (sectors.length - (randomSector % sectors.length)) % sectors.length;
+                    const prize = sectors[actualIndex].win * (bet === 0.02 ? 2.5 : 1); // Бонус x2.5 за ставку 0.02
 
                     if (prize > 0) {
                         balance += prize;
-                        document.getElementById('result-text').innerText = `🎉 ПРИЗ: ${prize} UA!`;
+                        document.getElementById('result-text').innerText = `🎉 ВИГРАШ: ${prize} UA!`;
                         confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
                         await db.collection('users').doc(userName).set({ amount: balance }, { merge: true });
                     } else {
-                        document.getElementById('result-text').innerText = "Пощастить наступного разу! ☘️";
+                        document.getElementById('result-text').innerText = "Зовсім поруч! ☘️";
                     }
                     isSpinning = false;
                     document.getElementById('spin-btn').disabled = false;
