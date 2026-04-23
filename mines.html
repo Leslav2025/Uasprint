@@ -3,50 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UA MINES - МІНИ</title>
+    <title>UA MINES - ГРА НА UA</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <style>
-        body { background: #0b101b; color: white; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; padding: 20px; margin: 0; min-height: 100vh; }
-        .main { background: linear-gradient(145deg, #151b2b, #1e263d); padding: 25px; border-radius: 24px; width: 100%; max-width: 380px; border: 1px solid #2a3454; text-align: center; position: relative; box-shadow: 0 20px 40px rgba(0,0,0,0.6); }
-        .back-link { position: absolute; top: 15px; left: 20px; color: #ffd700; text-decoration: none; font-size: 12px; font-weight: bold; z-index: 10; }
-        .title-mines { font-size: 26px; font-weight: 900; margin: 30px 0 5px 0; color: #ffd700; }
-        .balance-info { font-size: 14px; margin-bottom: 20px; opacity: 0.8; }
-        
-        /* СІТКА МІН */
-        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 20px 0; }
-        .cell { aspect-ratio: 1; background: #1a2235; border: 1px solid #2a3454; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; transition: 0.2s; }
-        .cell:active { transform: scale(0.9); background: #2a3454; }
-
-        #deposit-btn { background: #4caf50; color: white; border: none; padding: 15px; width: 100%; font-weight: bold; border-radius: 14px; cursor: pointer; text-transform: uppercase; margin-top: 10px; }
-        .info-text { font-size: 11px; opacity: 0.5; margin-top: 10px; }
+        body { background: #0b101b; color: white; font-family: sans-serif; display: flex; justify-content: center; padding: 20px; margin: 0; }
+        .main { background: #151b2b; padding: 20px; border-radius: 24px; width: 100%; max-width: 360px; text-align: center; border: 1px solid #2a3454; }
+        .balance-box { background: rgba(255,215,0,0.1); padding: 15px; border-radius: 15px; border: 1px solid #ffd700; margin: 20px 0; font-size: 20px; color: #ffd700; font-weight: bold; }
+        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 20px; }
+        .cell { aspect-ratio: 1; background: #1a2235; border-radius: 8px; border: 1px solid #2a3454; display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; }
+        .cell.open { background: #2a3454; border-color: #ffd700; }
+        .btn-play { background: #ffd700; color: #000; border: none; padding: 15px; width: 100%; border-radius: 12px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+        .btn-play:disabled { opacity: 0.5; cursor: not-allowed; }
+        #ton-connect { display: flex; justify-content: center; margin-bottom: 10px; }
     </style>
 </head>
 <body>
     <div class="main">
-        <a href="index.html" class="back-link">← НАЗАД</a>
+        <a href="index.html" style="color:#ffd700; text-decoration:none; float:left; font-size:12px;">← НАЗАД</a>
+        <div id="ton-connect"></div>
         
-        <div id="ton-connect" style="display: flex; justify-content: center; margin-bottom: 15px; margin-top: 20px;"></div>
-        
-        <div class="title-mines">UA MINES</div>
-        <div class="balance-info">Баланс: <span id="user-balance" style="color:#ffd700">...</span> UA</div>
+        <div class="balance-box">Баланс: <span id="user-balance">...</span> UA</div>
 
         <div class="grid" id="mine-grid"></div>
 
-        <button id="deposit-btn" onclick="buyUA()">КУПИТИ 5000 UA (0.01 TON)</button>
-        <p class="info-text">Купуйте UA за TON для гри в лотереї та міни</p>
+        <button class="btn-play" id="start-btn" onclick="startGame()">ГРАТИ (100 UA)</button>
+        <p style="font-size:10px; opacity:0.5; margin-top:10px;">Знайди діамант та отримай +200 UA!</p>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
-        // Використовуємо той самий ID, що і в DICE
         let userName = (tg.initDataUnsafe && tg.initDataUnsafe.user) ? (tg.initDataUnsafe.user.username || tg.initDataUnsafe.user.first_name) : "Гравець";
         
         let balance = 0;
+        let gameActive = false;
+        let mines = [];
 
-        // ТОЧНО ТАКИЙ ЖЕ МАНІФЕСТ, ЯК В DICE
+        // ТВОЯ РОБОЧА КОНФІГУРАЦІЯ ЯК У DICE
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://leslav2025.github.io/Uasprint/tonconnect-manifest.json',
             buttonRootId: 'ton-connect'
@@ -61,57 +56,74 @@
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        async function loadData() {
+        // ЗАВАНТАЖЕННЯ БАЛАНСУ (ПОЛЕ AMOUNT)
+        async function loadBalance() {
             const doc = await db.collection('users').doc(userName).get();
-            // Використовуємо поле 'amount', як у DICE
             balance = doc.exists ? (doc.data().amount || 0) : 0;
             document.getElementById('user-balance').innerText = balance.toLocaleString();
         }
 
-        async function buyUA() {
-            if (!tonConnectUI.connected) return alert("Підключіть гаманець!");
+        async function startGame() {
+            if (balance < 100) return tg.showAlert("Мало UA! Поповни через TON.");
+            if (gameActive) return;
+
+            // 1. ЗНІМАЄМО 100 UA ПРИ СТАРТІ
+            balance -= 100;
+            await db.collection('users').doc(userName).set({ amount: balance }, { merge: true });
+            document.getElementById('user-balance').innerText = balance.toLocaleString();
+
+            gameActive = true;
+            document.getElementById('start-btn').disabled = true;
             
-            const bet = 0.01; // Фіксована сума
+            // Генеруємо міни (наприклад, 3 міни на 25 клітинок)
+            mines = Array(25).fill(false);
+            let count = 0;
+            while(count < 3) {
+                let r = Math.floor(Math.random() * 25);
+                if(!mines[r]) { mines[r] = true; count++; }
+            }
 
-            try {
-                await tonConnectUI.sendTransaction({
-                    validUntil: Math.floor(Date.now() / 1000) + 300,
-                    messages: [{ 
-                        address: "EQBrD-UZ8w2tAyxCNjO8lF4ioTwI-ELiQgF7kclC7gM2UOO_", 
-                        amount: (bet * 1000000000).toString() 
-                    }]
-                });
-
-                // Нарахування UA в базу (поле amount)
-                balance += 5000;
-                await db.collection('users').doc(userName).set({ amount: balance }, { merge: true });
-                
-                // Статистика проекту
-                const statsRef = db.collection('stats').doc('global');
-                db.runTransaction(async (t) => {
-                    const d = await t.get(statsRef);
-                    t.set(statsRef, { totalIn: (d.exists ? d.data().totalIn || 0 : 0) + bet }, { merge: true });
-                });
-
-                tg.showAlert("Успішно! Вам нараховано 5000 UA");
-                loadData();
-            } catch (e) { console.error(e); }
+            renderGrid();
+            tg.showAlert("Гру розпочато! Знято 100 UA.");
         }
 
-        function createGrid() {
+        function renderGrid() {
             const grid = document.getElementById('mine-grid');
             grid.innerHTML = '';
             for (let i = 0; i < 25; i++) {
                 const cell = document.createElement('div');
                 cell.className = 'cell';
                 cell.innerHTML = '❓';
-                cell.onclick = () => { cell.innerHTML = '💎'; };
+                cell.onclick = () => openCell(i, cell);
                 grid.appendChild(cell);
             }
         }
 
-        createGrid();
-        loadData();
+        async function openCell(index, element) {
+            if (!gameActive || element.classList.contains('open')) return;
+
+            element.classList.add('open');
+            if (mines[index]) {
+                element.innerHTML = '💥';
+                gameActive = false;
+                tg.showAlert("БОМБА! Ти програв 100 UA.");
+                document.getElementById('start-btn').disabled = false;
+            } else {
+                element.innerHTML = '💎';
+                // 2. ДОДАЄМО 200 UA ПРИ ВИГРАШІ (ЗНАЙШОВ ДІАМАНТ)
+                balance += 200;
+                await db.collection('users').doc(userName).set({ amount: balance }, { merge: true });
+                document.getElementById('user-balance').innerText = balance.toLocaleString();
+                tg.showAlert("ДІАМАНТ! +200 UA нараховано!");
+                
+                // Можна грати далі або завершити
+                gameActive = false; 
+                document.getElementById('start-btn').disabled = false;
+            }
+        }
+
+        loadBalance();
+        renderGrid();
     </script>
 </body>
 </html>
