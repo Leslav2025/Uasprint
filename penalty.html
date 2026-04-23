@@ -2,109 +2,135 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>UA PENALTY ⚽</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <style>
-        body { background: #0b101b; color: white; font-family: sans-serif; text-align: center; padding: 20px; margin: 0; }
-        .stats { display: flex; justify-content: space-around; background: #151b2b; padding: 10px; border-radius: 15px; margin-bottom: 20px; border: 1px solid #ffd700; }
-        .gate { position: relative; width: 300px; height: 150px; border: 5px solid white; border-bottom: none; margin: 40px auto; background: rgba(255,255,255,0.05); display: flex; }
-        .sector { flex: 1; border: 1px dashed rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 2; }
-        .ball { width: 40px; height: 40px; background: white; border-radius: 50%; position: absolute; bottom: -60px; left: 130px; transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); font-size: 30px; line-height: 40px; }
-        .btn-main { background: linear-gradient(90deg, #ffd700, #ff8800); color: black; padding: 18px; width: 100%; border-radius: 15px; font-weight: 900; border: none; cursor: pointer; font-size: 16px; }
-        .btn-main:disabled { background: #333; color: #777; }
-        #ton-connect { display: flex; justify-content: center; margin-bottom: 15px; }
+        :root { --gold: #ffd700; --bg: #0b101b; --card: #151b2b; }
+        body { background: var(--bg); color: white; font-family: sans-serif; text-align: center; margin: 0; padding: 15px; }
+        .header-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .back-btn { text-decoration: none; color: var(--gold); font-weight: bold; font-size: 14px; }
+        .balance-display { background: rgba(255,215,0,0.1); border: 1px solid var(--gold); padding: 5px 12px; border-radius: 20px; color: var(--gold); font-weight: 900; }
+        .stats { display: flex; justify-content: space-around; background: var(--card); padding: 15px; border-radius: 20px; margin: 15px 0; border: 1px solid rgba(255,215,0,0.3); }
+        .gate { position: relative; width: 100%; max-width: 320px; height: 160px; border: 4px solid white; border-bottom: none; margin: 20px auto; background: rgba(255,255,255,0.05); display: flex; }
+        .sector { flex: 1; z-index: 2; border: 1px dashed rgba(255,255,255,0.1); }
+        .ball { width: 40px; height: 40px; position: absolute; bottom: -50px; left: calc(50% - 20px); transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); font-size: 35px; z-index: 3; }
+        .btn-main { background: linear-gradient(90deg, #ffd700, #ff8800); color: black; padding: 18px; width: 100%; border-radius: 15px; font-weight: 900; border: none; font-size: 16px; text-transform: uppercase; margin-top: 10px; }
+        #ton-connect { display: flex; justify-content: center; margin-bottom: 5px; transform: scale(0.8); }
     </style>
 </head>
 <body>
 
+    <div class="header-nav">
+        <a href="index.html" class="back-btn">❮ НАЗАД</a>
+        <div class="balance-display">💰 <span id="user-balance">0</span> UA</div>
+    </div>
+
     <div id="ton-connect"></div>
 
     <div class="stats">
-        <div>М'ячі: <b id="balls-count">0</b></div>
-        <div>Виграш: <b id="win-sum">0</b> TON</div>
+        <div>СПРОБИ: <b id="balls-count" style="color:var(--gold)">0</b></div>
+        <div>ВИГРАШ: <b id="win-sum" style="color:var(--gold)">0</b> UA</div>
     </div>
 
     <div class="gate">
-        <div class="sector" onclick="select(0)" id="s0">ЛІВО</div>
-        <div class="sector" onclick="select(1)" id="s1">ЦЕНТР</div>
-        <div class="sector" onclick="select(2)" id="s2">ПРАВО</div>
+        <div class="sector" onclick="select(0)" id="s0"></div>
+        <div class="sector" onclick="select(1)" id="s1"></div>
+        <div class="sector" onclick="select(2)" id="s2"></div>
         <div class="ball" id="ball">⚽</div>
     </div>
 
-    <div id="game-controls">
-        <button id="buy-btn" class="btn-main" onclick="buyShots()">КУПИТИ 10 УДАРІВ (0.01 TON)</button>
-        <button id="kick-btn" class="btn-main" onclick="kick()" style="display:none;">УДАРИТИ!</button>
-    </div>
+    <div id="msg" style="height:30px; margin: 15px 0; font-weight: bold;"></div>
 
-    <p id="msg" style="margin-top:20px; font-weight:bold;"></p>
+    <button id="buy-btn" class="btn-main" onclick="buyShots()">ГРАТИ (0.01 TON = 10 УДАРІВ)</button>
+    <button id="kick-btn" class="btn-main" onclick="kick()" style="display:none;">УДАРИТИ!</button>
 
     <script>
+        const firebaseConfig = { 
+            apiKey: "AIzaSyAYt_bjoLkBBE6LRTKgvbncm_O-rM_K16o", 
+            authDomain: "ualottery.firebaseapp.com", 
+            projectId: "ualottery", 
+            appId: "1:960757780790:web:568c021958b4ec8f0d8bd6" 
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const tg = window.Telegram.WebApp;
+        const userId = tg.initDataUnsafe.user ? tg.initDataUnsafe.user.id.toString() : "guest";
+
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://leslav2025.github.io/Uasprint/tonconnect-manifest.json',
             buttonRootId: 'ton-connect'
         });
 
         let balls = 0;
-        let totalWin = 0;
+        let sessionWin = 0;
         let selected = -1;
-        const ball = document.getElementById('ball');
+
+        // ЗАВАНТАЖЕННЯ БАЛАНСУ З СЕРВЕРА
+        async function loadBalance() {
+            const doc = await db.collection('users').doc(userId).get();
+            if (doc.exists) {
+                document.getElementById('user-balance').innerText = doc.data().balance || 0;
+            }
+        }
+        loadBalance();
 
         async function buyShots() {
-            if(!tonConnectUI.connected) return alert("Спочатку підключіть гаманець!");
+            if(!tonConnectUI.connected) return tg.showAlert("Підключіть гаманець!");
             try {
                 await tonConnectUI.sendTransaction({
                     validUntil: Math.floor(Date.now() / 1000) + 300,
-                    messages: [{ address: "EQBrD-UZ8w2tAyxCNjO8lF4ioTwI-ELiQgF7kclC7gM2UOO_", amount: "10000000" }] // 0.01 TON
+                    messages: [{ address: "EQBrD-UZ8w2tAyxCNjO8lF4ioTwI-ELiQgF7kclC7gM2UOO_", amount: "10000000" }]
                 });
                 balls = 10;
-                updateUI();
+                sessionWin = 0;
                 document.getElementById('buy-btn').style.display = 'none';
                 document.getElementById('kick-btn').style.display = 'block';
-            } catch(e) { alert("Помилка оплати"); }
+                updateUI();
+            } catch(e) { tg.showAlert("Помилка оплати"); }
         }
 
         function select(id) {
             selected = id;
             document.querySelectorAll('.sector').forEach(s => s.style.background = 'none');
-            document.getElementById('s'+id).style.background = 'rgba(255,215,0,0.3)';
+            document.getElementById('s'+id).style.background = 'rgba(255,215,0,0.2)';
         }
 
-        function kick() {
-            if(selected === -1) return alert("Оберіть кут!");
-            if(balls <= 0) return;
-
+        async function kick() {
+            if(selected === -1 || balls <= 0) return;
             balls--;
-            const isGoal = Math.random() > 0.4; // 60% шанс на гол
-            const pos = ['-90px, -120px', '0px, -120px', '90px, -120px'];
-            
-            ball.style.transform = `translate(${pos[selected]}) scale(0.5)`;
+            const isGoal = Math.random() > 0.5;
+            const pos = ['-100px, -130px', '0px, -130px', '100px, -130px'];
+            document.getElementById('ball').style.transform = `translate(${pos[selected]}) scale(0.6)`;
 
-            setTimeout(() => {
+            setTimeout(async () => {
                 if(isGoal) {
-                    totalWin += 0.005; // Нагорода за гол
-                    document.getElementById('msg').innerText = "ГОООЛ! +0.005 TON";
+                    sessionWin += 200;
+                    // ЗАПИС НА СЕРВЕР
+                    await db.collection('users').doc(userId).update({
+                        balance: firebase.firestore.FieldValue.increment(200)
+                    });
+                    document.getElementById('msg').innerText = "ГОООЛ! +200 UA";
                     document.getElementById('msg').style.color = "#4caf50";
+                    loadBalance(); // Оновити цифру зверху
                 } else {
-                    document.getElementById('msg').innerText = "ПОВЗ / ВІДБИТО!";
+                    document.getElementById('msg').innerText = "ПРОМАХ!";
                     document.getElementById('msg').style.color = "#ff4444";
                 }
                 updateUI();
-                
                 setTimeout(() => {
-                    ball.style.transform = 'translate(0,0) scale(1)';
-                    if(balls === 0) {
-                        alert(`Гра закінчена! Ваш виграш: ${totalWin.toFixed(3)} TON. Кошти будуть надіслані автоматично.`);
-                        location.reload();
-                    }
-                }, 1000);
+                    document.getElementById('ball').style.transform = 'translate(0,0) scale(1)';
+                    if(balls === 0) location.reload();
+                }, 800);
             }, 500);
         }
 
         function updateUI() {
             document.getElementById('balls-count').innerText = balls;
-            document.getElementById('win-sum').innerText = totalWin.toFixed(3);
+            document.getElementById('win-sum').innerText = sessionWin;
         }
     </script>
 </body>
