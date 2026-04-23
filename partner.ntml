@@ -3,135 +3,109 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UA GOLDEN HUB - ГОЛОВНА</title>
+    <title>UA PARTNER - ПАНЕЛЬ</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <style>
-        body { background: #0b101b; color: white; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
-        .hub-container { width: 100%; max-width: 400px; }
-        
-        .header { text-align: center; margin: 20px 0; }
-        .header h1 { font-size: 32px; font-weight: 900; color: #ffd700; margin: 0; letter-spacing: 2px; }
-        .header p { font-size: 10px; opacity: 0.5; letter-spacing: 4px; margin-top: 5px; }
-
-        .balance-card { background: linear-gradient(145deg, #1e263d, #151b2b); border-radius: 24px; padding: 25px; border: 1px solid #2a3454; text-align: center; margin-bottom: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
-        .balance-label { font-size: 11px; opacity: 0.6; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
-        .balance-value { font-size: 32px; font-weight: 900; color: #ffd700; display: block; }
-        .currency-tag { font-size: 14px; color: #ffd700; opacity: 0.8; }
-
-        .game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; }
-        .game-card { background: #1a2235; border: 1px solid #2a3454; border-radius: 20px; padding: 20px; text-align: center; text-decoration: none; color: white; transition: 0.3s; position: relative; overflow: hidden; }
-        .game-card:active { transform: scale(0.95); }
-        .game-card .icon { font-size: 34px; display: block; margin-bottom: 10px; }
-        .game-card .name { font-weight: 800; font-size: 13px; text-transform: uppercase; }
-        
-        .full-width { grid-column: span 2; background: linear-gradient(90deg, #1a2235, #232d47); }
-
-        .partner-btn { margin-top: 25px; background: linear-gradient(90deg, #ff8800, #ffd700); color: #000; padding: 18px; border-radius: 18px; text-decoration: none; display: flex; justify-content: center; align-items: center; font-weight: 900; font-size: 14px; width: 100%; box-sizing: border-box; }
-        
-        #ton-connect { margin-bottom: 20px; }
+        body { background: #0b101b; color: white; font-family: 'Segoe UI', sans-serif; padding: 20px; display: flex; justify-content: center; }
+        .card { background: #151b2b; padding: 30px; border-radius: 24px; border: 1px solid #ffd700; width: 100%; max-width: 400px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h1 { color: #ffd700; font-size: 22px; text-transform: uppercase; margin-bottom: 20px; }
+        label { display: block; text-align: left; font-size: 12px; margin: 10px 0 5px 5px; color: #ffd700; opacity: 0.8; }
+        input, select { width: 100%; padding: 14px; margin-bottom: 15px; border-radius: 12px; border: 1px solid #2a3454; background: #0b101b; color: white; box-sizing: border-box; outline: none; }
+        .btn-activate { background: linear-gradient(90deg, #ffd700, #ff8800); color: black; padding: 18px; width: 100%; border-radius: 16px; font-weight: 900; border: none; cursor: pointer; text-transform: uppercase; }
+        #link-section { display: none; margin-top: 20px; padding: 15px; background: rgba(76, 175, 80, 0.1); border-radius: 12px; border: 1px dashed #4caf50; word-break: break-all; }
     </style>
 </head>
 <body>
+    <div class="card">
+        <h1>ВЛАСНЕ КАЗИНО 🚀</h1>
+        <div id="ton-connect" style="margin-bottom: 20px; display: flex; justify-content: center;"></div>
 
-    <div class="hub-container">
-        <div class="header">
-            <h1>UA HUB</h1>
-            <p>PREMIUM ENTERTAINMENT</p>
+        <label>ВАЛЮТА КАЗИНО:</label>
+        <select id="partner-asset">
+            <option value="TON">TON (Нативна)</option>
+            <option value="USDT">USDT (Tether)</option>
+        </select>
+
+        <label>ВАШ ГАМАНЕЦЬ (ДЛЯ ПРИБУТКУ 90%):</label>
+        <input type="text" id="partner-wallet" placeholder="UQDqC...">
+
+        <label>ВАШ БОТ ПІДТРИМКИ (@username):</label>
+        <input type="text" id="partner-bot" placeholder="напр. tokenpist_bot">
+
+        <button class="btn-activate" id="activate-btn" onclick="activatePartner()">АКТИВУВАТИ ТА ОТРИМАТИ ЛІНК</button>
+
+        <div id="link-section">
+            <b style="color: #4caf50;">✅ ПАРТНЕРСТВО АКТИВОВАНЕ!</b><br>
+            <p style="font-size: 12px;">Ваше реферальне посилання:</p>
+            <span id="final-link" style="color: #4caf50; font-size: 13px; font-weight: bold;"></span>
         </div>
-
-        <div id="ton-connect"></div>
-
-        <div class="balance-card">
-            <div class="balance-label">Всього на рахунку</div>
-            <span class="balance-value" id="user-balance">0</span>
-            <span class="currency-tag" id="currency-name">UA (TON)</span>
-            <div style="margin-top: 20px;">
-                <a href="withdraw.html" style="background: #ffd700; color: #000; text-decoration: none; padding: 8px 25px; border-radius: 12px; font-size: 14px; font-weight: 900;">ВИВІД</a>
-            </div>
-        </div>
-
-        <div class="game-grid">
-            <a href="dice.html" class="game-card">
-                <span class="icon">🎲</span>
-                <span class="name">Dice</span>
-            </a>
-            <a href="wheel.html" class="game-card">
-                <span class="icon">🎡</span>
-                <span class="name">Wheel</span>
-            </a>
-            <a href="mines.html" class="game-card">
-                <span class="icon">💣</span>
-                <span class="name">Mines</span>
-            </a>
-            <a href="crash.html" class="game-card">
-                <span class="icon">🚀</span>
-                <span class="name">Crash</span>
-            </a>
-            <a href="index1.html" class="game-card full-width">
-                <span class="icon">🎟️</span>
-                <span class="name">UA Sprint Lottery</span>
-            </a>
-        </div>
-
-        <a href="partner.html" class="partner-btn">
-            🚀 ВЛАСНЕ КАЗИНО (ФРАНШИЗА)
-        </a>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
         let userName = (tg.initDataUnsafe && tg.initDataUnsafe.user) ? (tg.initDataUnsafe.user.username || tg.initDataUnsafe.user.first_name) : "Guest";
 
-        // 1. ПЕРЕВІРКА ПАРТНЕРА (РЕФЕРАЛА)
-        const urlParams = new URLSearchParams(window.location.search);
-        const startParam = urlParams.get('start');
-        
-        if (startParam) {
-            localStorage.setItem('referred_by', startParam);
-            console.log("Зайшов через партнера: " + startParam);
-        }
-
-        // 2. НАЛАШТУВАННЯ TON CONNECT
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://leslav2025.github.io/Uasprint/tonconnect-manifest.json',
             buttonRootId: 'ton-connect'
         });
 
-        // 3. FIREBASE
         const firebaseConfig = { 
             apiKey: "AIzaSyAYt_bjoLkBBE6LRTKgvbncm_O-rM_K16o", 
             authDomain: "ualottery.firebaseapp.com", 
             projectId: "ualottery", 
             appId: "1:960757780790:web:568c021958b4ec8f0d8bd6" 
         };
-        firebase.initializeApp(firebaseConfig);
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        async function initApp() {
-            // Перевіряємо, в якій валюті працює партнер
-            const partnerId = localStorage.getItem('referred_by');
-            let currencyLabel = "UA (TON)";
-            
-            if (partnerId) {
-                const partnerDoc = await db.collection('partners').doc(partnerId).get();
-                if (partnerDoc.exists && partnerDoc.data().asset === "USDT") {
-                    currencyLabel = "UA (USDT)";
-                }
-            }
-            document.getElementById('currency-name').innerText = currencyLabel;
+        async function activatePartner() {
+            const wallet = document.getElementById('partner-wallet').value.trim();
+            const bot = document.getElementById('partner-bot').value.trim().replace('@', '');
+            const asset = document.getElementById('partner-asset').value;
 
-            // Завантаження балансу
-            const userDoc = await db.collection('users').doc(userName).get();
-            if (userDoc.exists) {
-                document.getElementById('user-balance').innerText = userDoc.data().amount.toLocaleString();
+            // ПЕРЕВІРКА НА ТЕБЕ (Адмін)
+            const isAdmin = (userName.toLowerCase() === "leslav"); 
+
+            if(!wallet || !bot) return alert("Заповніть всі поля!");
+
+            try {
+                if (!isAdmin) {
+                    if(!tonConnectUI.connected) return alert("Спочатку підключіть гаманець!");
+                    
+                    await tonConnectUI.sendTransaction({
+                        validUntil: Math.floor(Date.now() / 1000) + 300,
+                        messages: [{ 
+                            address: "EQBrD-UZ8w2tAyxCNjO8lF4ioTwI-ELiQgF7kclC7gM2UOO_", 
+                            amount: "1000000000" 
+                        }]
+                    });
+                }
+
+                await db.collection('partners').doc(userName).set({
+                    wallet: wallet,
+                    supportBot: bot,
+                    asset: asset,
+                    active: true,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                // ТУТ ПЕРЕВІР, ЩОБ ЮЗЕРНЕЙМ БОТА БУВ ПРАВИЛЬНИЙ
+                const link = `https://t.me/tokenpist_bot?start=${userName}`;
+                document.getElementById('final-link').innerText = link;
+                document.getElementById('link-section').style.display = "block";
+                document.getElementById('activate-btn').style.display = "none";
+                
+                alert(isAdmin ? "Привіт, Leslav! Франшиза активована без оплати." : "Вітаємо! Тепер ви партнер.");
+
+            } catch (e) {
+                console.error(e);
+                alert("Помилка активації.");
             }
         }
-
-        initApp();
-        tg.expand();
     </script>
 </body>
 </html>
