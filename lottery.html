@@ -11,35 +11,38 @@
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         body { background: #0b101b; color: white; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; padding: 20px; margin: 0; min-height: 100vh; }
-        .main { background: linear-gradient(145deg, #151b2b, #1e263d); padding: 25px; border-radius: 24px; width: 100%; max-width: 380px; border: 1px solid #2a3454; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.6); position: relative; }
+        .main { background: linear-gradient(145deg, #151b2b, #1e263d); padding: 25px; border-radius: 24px; width: 100%; max-width: 380px; border: 1px solid #2a3454; text-align: center; position: relative; box-shadow: 0 20px 40px rgba(0,0,0,0.6); }
         
-        .back-link { position: absolute; top: 15px; left: 20px; color: #ffd700; text-decoration: none; font-size: 12px; font-weight: bold; z-index: 10; }
-        .withdraw-link { position: absolute; top: 15px; right: 20px; color: #ffd700; text-decoration: none; font-size: 12px; font-weight: bold; border: 1px solid #ffd700; padding: 4px 8px; border-radius: 8px; z-index: 10; }
-        
-        .title-sprint { font-size: 26px; font-weight: 900; margin: 30px 0 5px 0; color: #ffd700; letter-spacing: 1px; }
-        
-        .ticket { background: #1a2235; border: 2px dashed #ffd700; border-radius: 16px; padding: 20px; margin: 20px 0; position: relative; overflow: hidden; }
-        .ticket-status { font-size: 14px; opacity: 0.6; margin-bottom: 10px; }
-        .scratch-area { height: 80px; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; color: #ffd700; background: rgba(0,0,0,0.3); border-radius: 12px; border: 1px solid #2a3454; }
+        .nav-links { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        .nav-btn { color: #ffd700; text-decoration: none; font-size: 12px; font-weight: bold; border: 1px solid #ffd700; padding: 5px 10px; border-radius: 8px; }
 
-        #buy-btn { background: linear-gradient(90deg, #ffd700, #ff8800); color: #000; border: none; padding: 18px; width: 100%; font-weight: 900; border-radius: 16px; cursor: pointer; text-transform: uppercase; font-size: 16px; box-shadow: 0 5px 15px rgba(255, 215, 0, 0.2); }
+        .title-sprint { font-size: 28px; font-weight: 900; color: #ffd700; letter-spacing: 2px; text-shadow: 0 0 15px rgba(255, 215, 0, 0.3); }
+        .balance-box { background: rgba(255,215,0,0.1); padding: 12px; border-radius: 15px; border: 1px solid #ffd700; margin: 15px 0; font-size: 22px; color: #ffd700; font-weight: bold; }
+
+        .ticket { background: #1a2235; border: 2px dashed #ffd700; border-radius: 16px; padding: 25px; margin: 20px 0; position: relative; }
+        .ticket-status { font-size: 14px; opacity: 0.7; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px; }
+        .scratch-area { height: 90px; display: flex; align-items: center; justify-content: center; font-size: 36px; font-weight: 900; color: #ffd700; background: rgba(0,0,0,0.4); border-radius: 12px; border: 1px solid #2a3454; }
+
+        select { background: #1a2235; color: white; border: 1px solid #2a3454; padding: 12px; border-radius: 12px; width: 100%; font-weight: bold; margin-bottom: 15px; outline: none; }
+        #buy-btn { background: linear-gradient(90deg, #ffd700, #ff8800); color: #000; border: none; padding: 18px; width: 100%; font-weight: 900; border-radius: 16px; cursor: pointer; text-transform: uppercase; font-size: 16px; transition: 0.2s; }
+        #buy-btn:active { transform: scale(0.98); }
         #buy-btn:disabled { opacity: 0.5; filter: grayscale(1); }
 
-        .info-box { font-size: 14px; margin-bottom: 10px; opacity: 0.8; margin-top: 20px; }
-        select { background: #0b101b; color: #ffd700; border: 1px solid #2a3454; padding: 12px; border-radius: 12px; width: 100%; font-weight: bold; margin-bottom: 15px; outline: none; }
-        
+        .btn-deposit { background: transparent; color: #4caf50; border: 1px solid #4caf50; font-size: 11px; margin-top: 20px; padding: 10px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; }
         .prizes-info { font-size: 11px; opacity: 0.5; margin-top: 15px; line-height: 1.4; }
     </style>
 </head>
 <body>
     <div class="main">
-        <a href="index.html" class="back-link">← НАЗАД</a>
-        <a href="withdraw.html" class="withdraw-link">💳 ВИВІД</a>
-        
-        <div id="ton-connect" style="display: flex; justify-content: center; margin-bottom: 15px; margin-top: 20px;"></div>
+        <div class="nav-links">
+            <a href="index.html" class="nav-btn">← ХАБ</a>
+            <a href="withdraw.html" class="nav-btn">ВИВІД 💳</a>
+        </div>
+
+        <div id="ton-connect" style="display: flex; justify-content: center; margin-bottom: 10px;"></div>
         
         <div class="title-sprint">UA SPRINT</div>
-        <div class="info-box">Баланс: <span id="user-balance" style="color:#ffd700">...</span> UA</div>
+        <div class="balance-box"><span id="user-balance">0</span> UA</div>
 
         <div class="ticket">
             <div class="ticket-status" id="ticket-status">КУПІТЬ КВИТОК</div>
@@ -47,15 +50,18 @@
         </div>
 
         <select id="bet-amount">
-            <option value="0.01">КВИТОК: 0.01 TON</option>
-            <option value="0.02">КВИТОК: 0.02 TON</option>
+            <option value="100">КВИТОК: 100 UA</option>
+            <option value="200">КВИТОК: 200 UA</option>
+            <option value="500">КВИТОК: 500 UA</option>
         </select>
 
-        <button id="buy-btn" onclick="buyTicket()">КУПИТИ КВИТОК</button>
+        <button id="buy-btn" onclick="buyTicket()">КУПИТИ ТА СТЕРТИ</button>
+
+        <button class="btn-deposit" onclick="buyUA()">➕ ПОПОВНИТИ 5000 UA (0.01 TON)</button>
 
         <div class="prizes-info">
-            Можливі виграші за 0.01 TON:<br>
-            250 UA, 500 UA, 1000 UA або 5000 UA (JACKPOT)
+            Джекпот до x50 від вартості квитка!<br>
+            Виграш миттєво зараховується на баланс.
         </div>
     </div>
 
@@ -75,36 +81,28 @@
             projectId: "ualottery", 
             appId: "1:960757780790:web:568c021958b4ec8f0d8bd6" 
         };
-        firebase.initializeApp(firebaseConfig);
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
         async function loadData() {
             const doc = await db.collection('users').doc(userName).get();
-            balance = doc.exists ? doc.data().amount : 0;
+            balance = doc.exists ? (doc.data().amount || 0) : 0;
             document.getElementById('user-balance').innerText = balance.toLocaleString();
         }
 
         async function buyTicket() {
-            if (!tonConnectUI.connected) return alert("Підключіть гаманець!");
-            const bet = parseFloat(document.getElementById('bet-amount').value);
+            const cost = parseInt(document.getElementById('bet-amount').value);
+            if (balance < cost) return tg.showAlert("Мало UA на балансі! Поповніть рахунок.");
 
-            try {
-                await tonConnectUI.sendTransaction({
-                    validUntil: Math.floor(Date.now() / 1000) + 300,
-                    messages: [{ address: "EQBrD-UZ8w2tAyxCNjO8lF4ioTwI-ELiQgF7kclC7gM2UOO_", amount: (bet * 1000000000).toString() }]
-                });
+            // Списуємо вартість квитка
+            balance -= cost;
+            await db.collection('users').doc(userName).set({ amount: balance }, { merge: true });
+            document.getElementById('user-balance').innerText = balance.toLocaleString();
 
-                const statsRef = db.collection('stats').doc('global');
-                db.runTransaction(async (t) => {
-                    const d = await t.get(statsRef);
-                    t.set(statsRef, { totalIn: (d.exists ? d.data().totalIn || 0 : 0) + bet }, { merge: true });
-                });
-
-                processLottery(bet);
-            } catch (e) { console.error(e); }
+            processLottery(cost);
         }
 
-        function processLottery(bet) {
+        function processLottery(cost) {
             document.getElementById('buy-btn').disabled = true;
             document.getElementById('ticket-status').innerText = "ПЕРЕВІРКА...";
             document.getElementById('scratch-result').innerText = "⏳";
@@ -112,29 +110,54 @@
             setTimeout(async () => {
                 const rnd = Math.random();
                 let win = 0;
-                let multiplier = bet === 0.02 ? 2.2 : 1;
 
-                if (rnd < 0.15) win = 250;
-                else if (rnd < 0.22) win = 500;
-                else if (rnd < 0.25) win = 1000;
-                else if (rnd < 0.255) win = 5000; // Джекпот 0.5% шанс
+                // Математика виграшів (множники)
+                if (rnd < 0.20) win = cost * 1.5;   // 20% шанс на x1.5
+                else if (rnd < 0.30) win = cost * 3; // 10% шанс на x3
+                else if (rnd < 0.33) win = cost * 10; // 3% шанс на x10
+                else if (rnd < 0.335) win = cost * 50; // 0.5% шанс на ДЖЕКПОТ (x50)
 
-                win = Math.floor(win * multiplier);
+                win = Math.floor(win);
 
                 if (win > 0) {
                     balance += win;
                     await db.collection('users').doc(userName).set({ amount: balance }, { merge: true });
                     document.getElementById('scratch-result').innerText = win + " UA";
                     document.getElementById('ticket-status').innerText = "ВИТРАШНИЙ КВИТОК!";
+                    document.getElementById('scratch-result').style.color = "#4caf50";
                     confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
                 } else {
-                    document.getElementById('scratch-result').innerText = "X X X";
+                    document.getElementById('scratch-result').innerText = "ПРОГРАШ";
+                    document.getElementById('scratch-result').style.color = "#ff4b2b";
                     document.getElementById('ticket-status').innerText = "СПРОБУЙТЕ ЩЕ";
                 }
 
                 document.getElementById('buy-btn').disabled = false;
                 loadData();
-            }, 1500);
+            }, 1200);
+        }
+
+        async function buyUA() {
+            if(!tonConnectUI.connected) return tg.showAlert("Підключіть гаманець!");
+            try {
+                const result = await tonConnectUI.sendTransaction({
+                    validUntil: Math.floor(Date.now() / 1000) + 300,
+                    messages: [{ address: "EQBrD-UZ8w2tAyxCNjO8lF4ioTwI-ELiQgF7kclC7gM2UOO_", amount: "10000000" }]
+                });
+                if(result) {
+                    balance += 5000;
+                    await db.collection('users').doc(userName).set({ amount: balance }, { merge: true });
+                    
+                    const statsRef = db.collection('stats').doc('global');
+                    db.runTransaction(async (t) => {
+                        const d = await t.get(statsRef);
+                        t.set(statsRef, { totalIn: (d.exists ? d.data().totalIn || 0 : 0) + 0.01 }, { merge: true });
+                    });
+                    
+                    loadData();
+                    tg.showAlert("✅ Нараховано 5000 UA!");
+                }
+            } catch(e) { console.error(e); }
         }
 
         loadData();
