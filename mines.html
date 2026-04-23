@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UA MINES - МІНЕР</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        body { background: #0b101b; color: white; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; padding: 20px; margin: 0; min-height: 100vh; }
+        .main { background: linear-gradient(145deg, #151b2b, #1e263d); padding: 25px; border-radius: 24px; width: 100%; max-width: 380px; border: 1px solid #2a3454; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.6); position: relative; }
+        
+        .back-link { position: absolute; top: 15px; left: 20px; color: #ffd700; text-decoration: none; font-size: 12px; font-weight: bold; }
+        .withdraw-link { position: absolute; top: 15px; right: 20px; color: #ffd700; text-decoration: none; font-size: 12px; font-weight: bold; border: 1px solid #ffd700; padding: 4px 8px; border-radius: 8px; }
+        
+        .title-mines { font-size: 26px; font-weight: 900; margin: 30px 0 5px 0; color: #4caf50; }
+        
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 20px 0; }
+        .cell { width: 100%; aspect-ratio: 1/1; background: #1a2235; border: 2px solid #2a3454; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; transition: 0.2s; }
+        .cell.open { background: #0b101b; border-color: #4caf50; cursor: default; }
+        .cell.mine { background: #ff4b2b !important; border-color: #ff4b2b !important; }
+        
+        .status-box { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #2a3454; }
+        #current-win { color: #4caf50; font-weight: bold; font-size: 22px; }
+
+        #action-btn { background: #4caf50; color: white; border: none; padding: 18px; width: 100%; font-weight: 900; border-radius: 16px; cursor: pointer; text-transform: uppercase; display: none; }
+        #start-btn { background: linear-gradient(90deg, #ffd700, #ff8800); color: #000; border: none; padding: 18px; width: 100%; font-weight: 900; border-radius: 16px; cursor: pointer; text-transform: uppercase; }
+        
+        select { background: #0b101b; color: #ffd700; border: 1px solid #2a3454; padding: 12px; border-radius: 12px; width: 100%; font-weight: bold; margin-bottom: 15px; outline: none; }
+    </style>
+</head>
+<body>
+    <div class="main">
+        <a href="index.html" class="back-link">← НАЗАД</a>
+        <a href="withdraw.html" class="withdraw-link">💳 ВИВІД</a>
+        
+        <div id="ton-connect" style="display: flex; justify-content: center; margin-bottom: 15px; margin-top: 20px;"></div>
+        
+        <div class="title-mines">UA MINES</div>
+        <div style="font-size: 14px; opacity: 0.8; margin-bottom: 15px;">Баланс: <span id="user-balance" style="color:#ffd700">...</span> UA</div>
+
+        <div class="status-box">
+            <div style="font-size: 11px; opacity: 0.6;">НА КОНУ:</div>
+            <div id="current-win">0 UA</div>
+        </div>
+
+        <div class="grid" id="mine-grid">
+            <div class="cell" onclick="cellClick(0)"></div>
+            <div class="cell" onclick="cellClick(1)"></div>
+            <div class="cell" onclick="cellClick(2)"></div>
+            <div class="cell" onclick="cellClick(3)"></div>
+            <div class="cell" onclick="cellClick(4)"></div>
+            <div class="cell" onclick="cellClick(5)"></div>
+            <div class="cell" onclick="cellClick(6)"></div>
+            <div class="cell" onclick="cellClick(7)"></div>
+            <div class="cell" onclick="cellClick(8)"></div>
+        </div>
+
+        <select id="bet-amount">
+            <option value="0.01">СТАВКА: 0.01 TON</option>
+            <option value="0.02">СТАВКА: 0.02 TON</option>
+        </select>
+
+        <button id="start-btn" onclick="startGame()">ПОЧАТИ ГРУ</button>
+        <button id="action-btn" onclick="cashOut()">ЗАБРАТИ UA</button>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        let userName = (tg.initDataUnsafe && tg.initDataUnsafe.user) ? (tg.initDataUnsafe.user.username || tg.initDataUnsafe.user.first_name) : "Гравець";
+        
+        let balance = 0;
+        let gameActive = false;
+        let mines = [];
+        let openedCount = 0;
+        let currentPot = 0;
+
+        const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+            manifestUrl: 'https://leslav2025.github.io/Uasprint/tonconnect-manifest.json',
+            buttonRootId: 'ton-connect'
+        });
+
+        const firebaseConfig = { 
+            apiKey: "AIzaSyAYt_bjoLkBBE6LRTKgvbncm_O-rM_K16o", 
+            authDomain: "ualottery.firebaseapp.com", 
+            projectId: "ualottery", 
+            appId: "1:960757780790:web:568c021958b4ec8f0d8bd6" 
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        async function loadData() {
+            const doc = await db.collection('users').doc(userName).get();
+            balance = doc.exists ? doc.data().amount : 0;
+            document.getElementById('user-balance').innerText = balance.toLocaleString();
+        }
+
+        async function startGame() {
+            if (!tonConnectUI.connected) return alert("Підключіть гаманець!");
+            const bet = parseFloat(document.getElementById('bet-amount').value);
+
+            try {
+                await tonConnectUI.sendTransaction({
+                    validUntil: Math.floor(Date.now() / 1000) + 300,
+                    messages: [{ address: "EQBrD-UZ8w2tAyxCNjO8lF4ioTwI-ELiQgF7kclC7gM2UOO_", amount: (bet * 1000000000).toString() }]
+                });
+
+                // Глобальна статистика
+                const statsRef = db.collection('stats').doc('global');
+                db.runTransaction(async (t) => {
+                    const d = await t.get(statsRef);
+                    t.set(statsRef, { totalIn: (d.exists ? d.data().totalIn || 0 : 0) + bet }, { merge: true });
+                });
+
+                resetBoard();
+                mines = [];
+                while(mines.length < 2) {
+                    let r = Math.floor(Math.random() * 9);
+                    if(!mines.includes(r)) mines.push(r);
+                }
+                gameActive = true;
+                document.getElementById('start-btn').style.display = 'none';
+                document.getElementById('action-btn').style.display = 'block';
+                document.getElementById('action-btn').innerText = "ЗАБРАТИ 0 UA";
+            } catch (e) { console.error(e); }
+        }
+
+        function resetBoard() {
+            openedCount = 0; currentPot = 0;
+            document.getElementById('current-win').innerText = "0 UA";
+            document.querySelectorAll('.cell').forEach(c => {
+                c.className = 'cell'; c.innerText = '';
+            });
+        }
+
+        function cellClick(idx) {
+            if (!gameActive) return;
+            const cells = document.querySelectorAll('.cell');
+            if (cells[idx].classList.contains('open')) return;
+
+            if (mines.includes(idx)) {
+                gameActive = false;
+                cells[idx].classList.add('open', 'mine');
+                cells[idx].innerText = '💣';
+                document.getElementById('current-win').innerText = "ВИБУХ!";
+                setTimeout(() => { endGame(); }, 1000);
+            } else {
+                openedCount++;
+                cells[idx].classList.add('open');
+                cells[idx].innerText = '⭐';
+                
+                const bet = parseFloat(document.getElementById('bet-amount').value);
+                let base = bet === 0.01 ? 120 : 250;
+                currentPot += base * openedCount; // Кожна наступна зірка дорожча
+                
+                document.getElementById('current-win').innerText = currentPot + " UA";
+                document.getElementById('action-btn').innerText = `ЗАБРАТИ ${currentPot} UA`;
+                
+                if (openedCount === 7) cashOut(); 
+            }
+        }
+
+        async function cashOut() {
+            if (!gameActive || currentPot === 0) return;
+            gameActive = false;
+            balance += currentPot;
+            await db.collection('users').doc(userName).set({ amount: balance }, { merge: true });
+            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+            alert(`Ви виграли ${currentPot} UA!`);
+            endGame();
+        }
+
+        function endGame() {
+            gameActive = false;
+            document.getElementById('start-btn').style.display = 'block';
+            document.getElementById('action-btn').style.display = 'none';
+            loadData();
+        }
+
+        loadData();
+    </script>
+</body>
+</html>
