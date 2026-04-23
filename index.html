@@ -13,10 +13,9 @@
         
         /* ВЕРХНЯ ПАНЕЛЬ */
         .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .online-count { font-size: 10px; color: #4caf50; font-weight: bold; }
         .user-balance { background: rgba(255,215,0,0.1); border: 1px solid var(--gold); padding: 4px 12px; border-radius: 20px; color: var(--gold); font-weight: 900; }
 
-        /* БЛОК СТАТИСТИКИ */
+        /* СТАТИСТИКА ПРОЕКТУ */
         .hub-stats { 
             background: var(--card); border: 1px solid rgba(255, 215, 0, 0.2); 
             border-radius: 15px; padding: 10px; display: grid; 
@@ -27,7 +26,7 @@
         .stat-label { font-size: 8px; opacity: 0.6; text-transform: uppercase; display: block; margin-bottom: 2px; }
         .stat-value { font-size: 13px; font-weight: bold; color: var(--gold); }
 
-        /* СІТКА ІГОР (3 в ряд) */
+        /* СІТКА ІГОР */
         .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
         .game-card { 
             background: var(--card); border: 1px solid rgba(255, 215, 0, 0.1); 
@@ -38,20 +37,28 @@
         .game-icon { font-size: 24px; margin-bottom: 5px; }
         .game-name { font-weight: bold; font-size: 9px; text-transform: uppercase; }
 
-        /* БАНЕР ПАРТНЕРКИ */
+        /* ДОШКА ПОШАНИ */
+        .leaderboard { background: var(--card); border: 1px solid rgba(255, 215, 0, 0.2); border-radius: 15px; padding: 15px; margin-bottom: 15px; }
+        .leader-title { color: var(--gold); font-size: 12px; font-weight: bold; text-transform: uppercase; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+        .leader-item { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; }
+        .leader-rank { color: var(--gold); font-weight: bold; }
+
+        /* ВІДВІДУВАЧІ */
+        .visitors { text-align: center; padding: 10px; font-size: 11px; color: #4caf50; font-weight: bold; }
+        .dot { height: 7px; width: 7px; background: #4caf50; border-radius: 50%; display: inline-block; margin-right: 5px; box-shadow: 0 0 5px #4caf50; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+
         .partner-banner {
             background: linear-gradient(90deg, #1a2a4a, #151b2b);
             border: 1px solid var(--gold); border-radius: 15px; padding: 15px;
             text-decoration: none; color: white; display: flex; align-items: center; justify-content: space-between;
         }
-        .partner-info h3 { margin: 0; color: var(--gold); font-size: 14px; }
-        .partner-info p { margin: 3px 0 0; font-size: 10px; opacity: 0.7; }
     </style>
 </head>
 <body>
 
     <div class="top-bar">
-        <div class="online-count">● <span id="online-val">...</span> ONLINE</div>
+        <div style="font-size: 14px; font-weight: bold; color: var(--gold);">UA GOLDEN HUB 🔱</div>
         <div class="user-balance"><span id="user-balance">0</span> UA</div>
     </div>
 
@@ -67,7 +74,7 @@
     </div>
 
     <div class="grid">
-        <a href="dice.html" class="game-card"><div class="game-icon">🎲</div><div class="game-name">UA DICE</div></a>
+        <a href="dice.html" class="game-card"><div class="game-icon">🎲</div><div class="game-name">DICE</div></a>
         <a href="mines.html" class="game-card"><div class="game-icon">💣</div><div class="game-name">MINES</div></a>
         <a href="crash.html" class="game-card"><div class="game-icon">📈</div><div class="game-name">CRASH</div></a>
         <a href="penalty.html" class="game-card"><div class="game-icon">⚽</div><div class="game-name">PENALTY</div></a>
@@ -75,13 +82,24 @@
         <a href="lottery.html" class="game-card"><div class="game-icon">🎫</div><div class="game-name">LOTTERY</div></a>
     </div>
 
+    <div class="leaderboard">
+        <div class="leader-title">🏆 ДОШКА ПОШАНИ</div>
+        <div id="leader-list">
+            <div style="text-align:center; opacity:0.5; font-size:10px;">Завантаження...</div>
+        </div>
+    </div>
+
     <a href="partner.ntml" class="partner-banner">
         <div class="partner-info">
-            <h3>ВЛАСНЕ КАЗИНО 🚀</h3>
-            <p>Стань партнером та заробляй</p>
+            <h3 style="margin:0; color:var(--gold); font-size:14px;">ВЛАСНЕ КАЗИНО 🚀</h3>
+            <p style="margin:3px 0 0; font-size:10px; opacity:0.7;">Отримуй 90% від ставок</p>
         </div>
         <div style="font-size: 24px;">💰</div>
     </a>
+
+    <div class="visitors">
+        <span class="dot"></span> ЗАРАЗ ГРАЮТЬ: <span id="v-count">142</span>
+    </div>
 
     <script>
         const firebaseConfig = { 
@@ -97,28 +115,41 @@
 
         const userId = tg.initDataUnsafe.user ? tg.initDataUnsafe.user.id.toString() : "guest";
 
-        async function loadAllData() {
-            // 1. Баланс користувача
+        async function loadHubData() {
+            // Баланс
             const userDoc = await db.collection('users').doc(userId).get();
-            if (userDoc.exists) {
-                document.getElementById('user-balance').innerText = userDoc.data().balance || 0;
-            } else {
-                await db.collection('users').doc(userId).set({ balance: 0 });
-            }
+            if (userDoc.exists) document.getElementById('user-balance').innerText = userDoc.data().balance || 0;
 
-            // 2. Глобальна статистика хабу
+            // Статистика проекту
             const statsDoc = await db.collection('global_stats').doc('counters').get();
             if (statsDoc.exists) {
                 const s = statsDoc.data();
                 document.getElementById('stat-ton').innerText = (s.total_ton_in || 0).toFixed(2) + " TON";
                 document.getElementById('stat-ua').innerText = (s.total_ua_out || 0).toLocaleString() + " UA";
             }
+
+            // Дошка пошани (ТОП-3)
+            const leaders = await db.collection('users').orderBy('balance', 'desc').limit(3).get();
+            const lList = document.getElementById('leader-list');
+            lList.innerHTML = '';
+            let rank = 1;
+            leaders.forEach(doc => {
+                lList.innerHTML += `
+                    <div class="leader-item">
+                        <span><span class="leader-rank">#${rank}</span> Гравець ${doc.id.slice(0,5)}</span>
+                        <span style="font-weight:bold;">${doc.data().balance || 0} UA</span>
+                    </div>`;
+                rank++;
+            });
         }
 
-        loadAllData();
+        loadHubData();
         
-        // Імітація онлайну
-        document.getElementById('online-val').innerText = Math.floor(Math.random() * (220 - 110) + 110);
+        // Живий лічильник відвідувачів
+        setInterval(() => {
+            let c = parseInt(document.getElementById('v-count').innerText);
+            document.getElementById('v-count').innerText = c + (Math.random() > 0.5 ? 1 : -1);
+        }, 3000);
     </script>
 </body>
 </html>
