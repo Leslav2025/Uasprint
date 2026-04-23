@@ -11,12 +11,10 @@
         :root { --gold: #ffd700; --bg: #0b101b; --card: #151b2b; --text: #ffffff; }
         body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; padding: 12px; }
         
-        /* ВЕРХНЯ ПАНЕЛЬ: НІК + БАЛАНС */
         .header-main { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
         .user-info { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: bold; color: var(--gold); }
         .user-balance { background: rgba(255,215,0,0.1); border: 1px solid var(--gold); padding: 5px 12px; border-radius: 20px; color: var(--gold); font-weight: 900; font-size: 14px; }
 
-        /* СТАТИСТИКА */
         .hub-stats { 
             background: var(--card); border: 1px solid rgba(255, 215, 0, 0.2); 
             border-radius: 15px; padding: 10px; display: grid; 
@@ -26,7 +24,6 @@
         .stat-value { font-size: 13px; font-weight: bold; color: var(--gold); display: block; }
         .stat-label { font-size: 8px; opacity: 0.6; text-transform: uppercase; }
 
-        /* СІТКА ІГОР */
         .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
         .game-card { 
             background: var(--card); border: 1px solid rgba(255, 215, 0, 0.1); 
@@ -35,7 +32,6 @@
         .game-icon { font-size: 22px; margin-bottom: 4px; }
         .game-name { font-weight: bold; font-size: 9px; text-transform: uppercase; }
 
-        /* ДОШКА ПОШАНИ */
         .leaderboard { background: var(--card); border: 1px solid rgba(255, 215, 0, 0.2); border-radius: 15px; padding: 12px; margin-bottom: 15px; }
         .leader-item { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 12px; }
         
@@ -47,7 +43,7 @@
     <div class="header-main">
         <div class="user-info">
             <span>👤</span>
-            <span id="user-name">Завантаження...</span>
+            <span id="user-name">ЗАВАНТАЖЕННЯ...</span>
         </div>
         <div class="user-balance">
             <span id="user-balance">0</span> UA
@@ -65,7 +61,7 @@
         </div>
     </div>
 
-    <div class="grid" id="game-grid">
+    <div class="grid">
         <a href="dice.html" class="game-card"><div class="game-icon">🎲</div><div class="game-name">DICE</div></a>
         <a href="mines.html" class="game-card"><div class="game-icon">💣</div><div class="game-name">MINES</div></a>
         <a href="crash.html" class="game-card"><div class="game-icon">📈</div><div class="game-name">CRASH</div></a>
@@ -81,7 +77,7 @@
 
     <div class="visitors">
         <span style="display:inline-block; width:6px; height:6px; background:#4caf50; border-radius:50%; margin-right:4px;"></span>
-        ЗАРАЗ ГРАЮТЬ: <span id="v-count">144</span>
+        ЗАРАЗ ГРАЮТЬ: <span id="v-count">145</span>
     </div>
 
     <script>
@@ -96,50 +92,55 @@
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        // Отримання даних з Телеграм
         const user = tg.initDataUnsafe.user;
         const userId = user ? user.id.toString() : "guest";
-        const userName = user ? (user.username || user.first_name) : "Гість";
+        const userName = user ? (user.username || user.first_name) : "GAYDER";
 
         document.getElementById('user-name').innerText = userName.toUpperCase();
 
         async function syncData() {
-            // 1. Оновлення користувача в базі
-            const userRef = db.collection('users').doc(userId);
-            const doc = await userRef.get();
-            
-            if (!doc.exists) {
-                await userRef.set({ name: userName, balance: 0, lastSeen: new Date() });
-            } else {
-                document.getElementById('user-balance').innerText = doc.data().balance || 0;
-            }
+            try {
+                // 1. Отримуємо баланс користувача
+                const userRef = db.collection('users').doc(userId);
+                const doc = await userRef.get();
+                
+                if (doc.exists) {
+                    const userData = doc.data();
+                    document.getElementById('user-balance').innerText = userData.balance || 0;
+                } else {
+                    await userRef.set({ name: userName, balance: 0, lastSeen: new Date() });
+                }
 
-            // 2. Глобальна стата
-            const stats = await db.collection('global_stats').doc('counters').get();
-            if (stats.exists) {
-                document.getElementById('stat-ton').innerText = stats.data().total_ton_in.toFixed(2) + " TON";
-                document.getElementById('stat-ua').innerText = stats.data().total_ua_out.toLocaleString() + " UA";
-            }
+                // 2. Глобальна стата (TON та UA)
+                const stats = await db.collection('global_stats').doc('counters').get();
+                if (stats.exists) {
+                    const sData = stats.data();
+                    document.getElementById('stat-ton').innerText = (sData.total_ton_in || 0).toFixed(2) + " TON";
+                    document.getElementById('stat-ua').innerText = (sData.total_ua_out || 0).toLocaleString() + " UA";
+                }
 
-            // 3. Реальний лідерборд
-            const leaders = await db.collection('users').orderBy('balance', 'desc').limit(3).get();
-            const lList = document.getElementById('leader-list');
-            lList.innerHTML = '';
-            leaders.forEach((l, index) => {
-                const d = l.data();
-                lList.innerHTML += `
-                    <div class="leader-item">
-                        <span><b style="color:var(--gold)">#${index+1}</b> ${d.name || 'Анонім'}</span>
-                        <span style="color:var(--gold)">${d.balance || 0} UA</span>
-                    </div>`;
-            });
+                // 3. Виправлений ТОП гравців (без NaN)
+                const leaders = await db.collection('users').orderBy('balance', 'desc').limit(3).get();
+                const lList = document.getElementById('leader-list');
+                lList.innerHTML = '';
+                
+                let rank = 1;
+                leaders.forEach((l) => {
+                    const d = l.data();
+                    lList.innerHTML += `
+                        <div class="leader-item">
+                            <span><b style="color:var(--gold)">#${rank}</b> ${d.name || 'Анонім'}</span>
+                            <span style="color:var(--gold)">${d.balance || 0} UA</span>
+                        </div>`;
+                    rank++;
+                });
+            } catch (err) {
+                console.error("Помилка синхронізації:", err);
+            }
         }
 
         syncData();
-        setInterval(() => {
-            let c = parseInt(document.getElementById('v-count').innerText);
-            document.getElementById('v-count').innerText = c + (Math.random() > 0.5 ? 1 : -1);
-        }, 4000);
+        setInterval(syncData, 5000); // Оновлювати кожні 5 сек
     </script>
 </body>
 </html>
