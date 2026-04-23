@@ -3,79 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UA PARTNER - ФРАНШИЗА</title>
+    <title>UA PARTNER - ПАНЕЛЬ УПРАВЛІННЯ</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <style>
-        body { background: #0b101b; color: white; font-family: 'Segoe UI', sans-serif; padding: 20px; text-align: center; }
-        .card { background: #151b2b; padding: 25px; border-radius: 20px; border: 1px solid #ffd700; max-width: 400px; margin: auto; }
-        h1 { color: #ffd700; font-size: 22px; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 10px; border: 1px solid #2a3454; background: #0b101b; color: white; box-sizing: border-box; }
-        .btn-buy { background: linear-gradient(90deg, #ffd700, #ff8800); color: black; padding: 15px; width: 100%; border-radius: 12px; font-weight: bold; border: none; cursor: pointer; }
-        #partner-link-box { display: none; margin-top: 20px; padding: 15px; background: #000; border-radius: 10px; word-break: break-all; color: #4caf50; border: 1px dashed #4caf50; }
+        body { background: #0b101b; color: white; font-family: 'Segoe UI', sans-serif; padding: 20px; display: flex; justify-content: center; }
+        .card { background: linear-gradient(145deg, #151b2b, #1e263d); padding: 30px; border-radius: 24px; border: 1px solid #ffd700; width: 100%; max-width: 400px; text-align: center; box-shadow: 0 15px 35px rgba(0,0,0,0.5); }
+        h1 { color: #ffd700; font-size: 24px; margin-bottom: 10px; text-transform: uppercase; }
+        label { display: block; text-align: left; font-size: 12px; margin: 10px 0 5px 5px; opacity: 0.7; color: #ffd700; }
+        input, select { width: 100%; padding: 14px; margin-bottom: 15px; border-radius: 12px; border: 1px solid #2a3454; background: #0b101b; color: white; font-size: 14px; box-sizing: border-box; }
+        .btn-activate { background: linear-gradient(90deg, #ffd700, #ff8800); color: black; padding: 18px; width: 100%; border-radius: 16px; font-weight: 900; border: none; cursor: pointer; text-transform: uppercase; transition: 0.3s; }
+        #link-section { display: none; margin-top: 25px; padding: 20px; background: rgba(76, 175, 80, 0.1); border-radius: 16px; border: 1px dashed #4caf50; }
+        .link-text { word-break: break-all; color: #4caf50; font-family: monospace; font-size: 13px; margin-top: 10px; display: block; }
     </style>
 </head>
 <body>
+
     <div class="card">
-        <h1>СТАНЬ ВЛАСНИКОМ КАЗИНО</h1>
-        <p style="font-size: 13px; opacity: 0.8;">Активуй франшизу за 1 TON та отримуй 90% від усіх ставок твоїх гравців автоматично.</p>
+        <h1>ВЛАСНЕ КАЗИНО 🚀</h1>
+        <p style="font-size: 13px; opacity: 0.8; margin-bottom: 20px;">Налаштуйте свій проект та отримуйте 90% прибутку автоматично.</p>
         
-        <div id="ton-connect" style="margin-bottom: 20px;"></div>
+        <div id="ton-connect" style="margin-bottom: 20px; display: flex; justify-content: center;"></div>
 
-        <input type="text" id="partner-wallet" placeholder="Твій TON Гаманець для виплат">
-        <input type="text" id="partner-bot" placeholder="Юзернейм твого бота (напр. tokenpist_bot)">
-        
-        <button class="btn-buy" id="activate-btn" onclick="activatePartner()">АКТИВУВАТИ ЗА 1 TON</button>
+        <label>ВАЛЮТА ВАШОГО КАЗИНО:</label>
+        <select id="partner-asset">
+            <option value="TON">TON (Нативна монета)</option>
+            <option value="USDT">USDT (Tether Jetton)</option>
+        </select>
 
-        <div id="partner-link-box">
-            <b>Твоє посилання для реклами:</b><br>
-            <span id="final-link"></span>
+        <label>ВАШ ГАМАНЕЦЬ ДЛЯ ПРИБУТКУ:</label>
+        <input type="text" id="partner-wallet" placeholder="UQDqC... (ваш TON адрес)">
+
+        <label>ВАШ БОТ ДЛЯ ВИПЛАТ (@username):</label>
+        <input type="text" id="partner-bot" placeholder="напр. my_support_bot">
+
+        <button class="btn-activate" id="activate-btn" onclick="activatePartner()">АКТИВУВАТИ ЗА 1 TON</button>
+
+        <div id="link-section">
+            <span style="font-weight: bold; color: #4caf50;">✅ ПАРТНЕРСТВО АКТИВОВАНЕ!</span>
+            <label>Ваше посилання для залучення гравців:</label>
+            <span id="final-link" class="link-text"></span>
+            <p style="font-size: 11px; margin-top: 10px; opacity: 0.6;">Гравці, що зайдуть за цим лінком, будуть приносити вам 90% від кожної ставки.</p>
         </div>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
-        let userName = (tg.initDataUnsafe && tg.initDataUnsafe.user) ? (tg.initDataUnsafe.user.username || tg.initDataUnsafe.user.first_name) : "User";
+        let userName = (tg.initDataUnsafe && tg.initDataUnsafe.user) ? (tg.initDataUnsafe.user.username || tg.initDataUnsafe.user.first_name) : "Partner_" + Math.floor(Math.random()*1000);
 
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://leslav2025.github.io/Uasprint/tonconnect-manifest.json',
             buttonRootId: 'ton-connect'
         });
 
-        const firebaseConfig = { /* Твій конфиг */ };
-        firebase.initializeApp(firebaseConfig);
+        // Конфігурація Firebase (використовуємо твою існуючу)
+        const firebaseConfig = { 
+            apiKey: "AIzaSyAYt_bjoLkBBE6LRTKgvbncm_O-rM_K16o", 
+            authDomain: "ualottery.firebaseapp.com", 
+            projectId: "ualottery", 
+            appId: "1:960757780790:web:568c021958b4ec8f0d8bd6" 
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
         async function activatePartner() {
-            const wallet = document.getElementById('partner-wallet').value;
-            const bot = document.getElementById('partner-bot').value.replace('@', '');
+            const wallet = document.getElementById('partner-wallet').value.trim();
+            const bot = document.getElementById('partner-bot').value.trim().replace('@', '');
+            const asset = document.getElementById('partner-asset').value;
 
-            if(!wallet || !bot) return alert("Заповніть всі поля!");
+            if(!wallet || !bot) return alert("Будь ласка, заповніть всі поля!");
+            if(!tonConnectUI.connected) return alert("Підключіть гаманець для оплати!");
 
             try {
-                // 1. Оплата тобі 1 TON
+                // 1. Оплата 1 TON на твій гаманець (Адміна)
                 await tonConnectUI.sendTransaction({
                     validUntil: Math.floor(Date.now() / 1000) + 300,
-                    messages: [{ address: "ТВІЙ_ГАМАНЕЦЬ", amount: "1000000000" }]
+                    messages: [{ 
+                        address: "EQBrD-UZ8w2tAyxCNjO8lF4ioTwI-ELiQgF7kclC7gM2UOO_", // Твій гаманець
+                        amount: "1000000000" // 1 TON у нано-тонах
+                    }]
                 });
 
-                // 2. Збереження в базу
+                // 2. Запис даних партнера в базу
                 await db.collection('partners').doc(userName).set({
                     wallet: wallet,
                     supportBot: bot,
-                    active: true
+                    asset: asset,
+                    owner: userName,
+                    active: true,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
-                // 3. Видача посилання
-                const link = `https://t.me/ТВІЙ_ГОЛОВНИЙ_БОТ?start=${userName}`;
+                // 3. Формування реферального посилання
+                // Заміни юзернейм бота на свого головного бота
+                const botUsername = "UA_GOLDEN_HUB_BOT"; 
+                const link = `https://t.me/${botUsername}?start=${userName}`;
+
                 document.getElementById('final-link').innerText = link;
-                document.getElementById('partner-link-box').style.display = "block";
+                document.getElementById('link-section').style.display = "block";
                 document.getElementById('activate-btn').style.display = "none";
                 
-                alert("Вітаємо! Франшиза активована.");
-            } catch (e) { console.error(e); }
+                tg.showAlert("Франшиза успішно активована! Тепер розповсюджуйте посилання.");
+
+            } catch (e) {
+                console.error(e);
+                alert("Помилка оплати або реєстрації. Спробуйте ще раз.");
+            }
         }
     </script>
 </body>
