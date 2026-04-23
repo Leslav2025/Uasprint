@@ -12,10 +12,11 @@
         body { background: #0b101b; color: white; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; padding: 20px; margin: 0; min-height: 100vh; }
         .main { background: linear-gradient(145deg, #151b2b, #1e263d); padding: 25px; border-radius: 24px; width: 100%; max-width: 380px; border: 1px solid #2a3454; text-align: center; position: relative; box-shadow: 0 20px 40px rgba(0,0,0,0.6); }
         
-        .back-link { position: absolute; top: 15px; left: 20px; color: #ffd700; text-decoration: none; font-size: 12px; font-weight: bold; z-index: 10; }
-        .withdraw-link { position: absolute; top: 15px; right: 20px; color: #ffd700; text-decoration: none; font-size: 12px; font-weight: bold; border: 1px solid #ffd700; padding: 4px 8px; border-radius: 8px; z-index: 10; }
+        .nav-links { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        .nav-btn { color: #ffd700; text-decoration: none; font-size: 12px; font-weight: bold; border: 1px solid #ffd700; padding: 5px 10px; border-radius: 8px; }
         
-        .title-dice { font-size: 26px; font-weight: 900; margin: 30px 0 5px 0; color: #ff4b2b; }
+        .title-dice { font-size: 26px; font-weight: 900; margin: 10px 0 5px 0; color: #ff4b2b; }
+        .balance-box { background: rgba(255,215,0,0.1); padding: 12px; border-radius: 15px; border: 1px solid #ffd700; margin: 15px 0; font-size: 22px; color: #ffd700; font-weight: bold; }
         
         .dice-container { height: 120px; display: flex; justify-content: center; align-items: center; margin: 20px 0; }
         #dice { width: 80px; height: 80px; background: white; border-radius: 15px; display: flex; justify-content: center; align-items: center; font-size: 45px; color: #000; box-shadow: 0 0 30px rgba(255,255,255,0.1); transition: 0.3s transform; }
@@ -30,19 +31,21 @@
         #roll-btn { background: linear-gradient(90deg, #ff4b2b, #ff416c); color: white; border: none; padding: 18px; width: 100%; font-weight: 900; border-radius: 16px; cursor: pointer; text-transform: uppercase; font-size: 16px; }
         #roll-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        select { background: #0b101b; color: #ffd700; border: 1px solid #2a3454; padding: 12px; border-radius: 12px; width: 100%; font-weight: bold; margin-bottom: 15px; outline: none; }
-        .info-box { font-size: 14px; margin-bottom: 10px; opacity: 0.8; margin-top: 20px; }
+        select { background: #1a2235; color: white; border: 1px solid #2a3454; padding: 12px; border-radius: 12px; width: 100%; font-weight: bold; margin-bottom: 15px; outline: none; }
+        .btn-deposit { background: transparent; color: #4caf50; border: 1px solid #4caf50; font-size: 11px; margin-top: 15px; padding: 10px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
     <div class="main">
-        <a href="index.html" class="back-link">← НАЗАД</a>
-        <a href="withdraw.html" class="withdraw-link">💳 ВИВІД</a>
+        <div class="nav-links">
+            <a href="index.html" class="nav-btn">← ХАБ</a>
+            <a href="withdraw.html" class="nav-btn">ВИВІД 💳</a>
+        </div>
         
-        <div id="ton-connect" style="display: flex; justify-content: center; margin-bottom: 15px; margin-top: 20px;"></div>
+        <div id="ton-connect" style="display: flex; justify-content: center; margin-bottom: 10px;"></div>
         
         <div class="title-dice">UA DICE</div>
-        <div class="info-box">Баланс: <span id="user-balance" style="color:#ffd700">...</span> UA</div>
+        <div class="balance-box"><span id="user-balance">0</span> UA</div>
 
         <div class="dice-container">
             <div id="dice">⚀</div>
@@ -54,12 +57,16 @@
         </div>
 
         <select id="bet-amount">
-            <option value="0.01">СТАВКА: 0.01 TON</option>
-            <option value="0.02">СТАВКА: 0.02 TON</option>
+            <option value="100">СТАВКА: 100 UA</option>
+            <option value="500">СТАВКА: 500 UA</option>
+            <option value="1000">СТАВКА: 1000 UA</option>
         </select>
 
-        <button id="roll-btn" onclick="playDice()">КИНУТИ КУБИК</button>
-        <p style="font-size: 11px; opacity: 0.5; margin-top: 10px;">Виграш: Ставка x2.0 в UA</p>
+        <button id="roll-btn" onclick="playDice()">КИЙНУТИ КУБИК</button>
+        
+        <button class="btn-deposit" onclick="buyUA()">➕ КУПИТИ 5000 UA (0.01 TON)</button>
+        
+        <p style="font-size: 11px; opacity: 0.5; margin-top: 10px;">Виграш: Ставка x2.0 UA</p>
     </div>
 
     <script>
@@ -82,12 +89,12 @@
             projectId: "ualottery", 
             appId: "1:960757780790:web:568c021958b4ec8f0d8bd6" 
         };
-        firebase.initializeApp(firebaseConfig);
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
         async function loadData() {
             const doc = await db.collection('users').doc(userName).get();
-            balance = doc.exists ? doc.data().amount : 0;
+            balance = doc.exists ? (doc.data().amount || 0) : 0;
             document.getElementById('user-balance').innerText = balance.toLocaleString();
         }
 
@@ -99,24 +106,17 @@
         }
 
         async function playDice() {
-            if (!tonConnectUI.connected || isRolling) return alert("Підключіть гаманець!");
-            const bet = parseFloat(document.getElementById('bet-amount').value);
+            if (isRolling) return;
+            const bet = parseInt(document.getElementById('bet-amount').value);
+            
+            if (balance < bet) return tg.showAlert("Мало UA на балансі! Поповніть рахунок.");
 
-            try {
-                await tonConnectUI.sendTransaction({
-                    validUntil: Math.floor(Date.now() / 1000) + 300,
-                    messages: [{ address: "EQBrD-UZ8w2tAyxCNjO8lF4ioTwI-ELiQgF7kclC7gM2UOO_", amount: (bet * 1000000000).toString() }]
-                });
+            // Списуємо ставку
+            balance -= bet;
+            await db.collection('users').doc(userName).set({ amount: balance }, { merge: true });
+            document.getElementById('user-balance').innerText = balance.toLocaleString();
 
-                // Статистика
-                const statsRef = db.collection('stats').doc('global');
-                db.runTransaction(async (t) => {
-                    const d = await t.get(statsRef);
-                    t.set(statsRef, { totalIn: (d.exists ? d.data().totalIn || 0 : 0) + bet }, { merge: true });
-                });
-
-                runDiceAnimation(bet);
-            } catch (e) { console.error(e); }
+            runDiceAnimation(bet);
         }
 
         function runDiceAnimation(bet) {
@@ -133,18 +133,41 @@
                 let isWin = (currentMode === 'less' && result <= 3) || (currentMode === 'more' && result >= 4);
                 
                 if (isWin) {
-                    let winAmount = bet === 0.01 ? 400 : 850; // Приблизно x2 в UA
+                    let winAmount = bet * 2;
                     balance += winAmount;
                     await db.collection('users').doc(userName).set({ amount: balance }, { merge: true });
                     tg.showAlert(`Випало ${result}! ВИ ВИГРАЛИ ${winAmount} UA! 🎉`);
                 } else {
-                    tg.showAlert(`Випало ${result}. На жаль, програш. Спробуйте ще!`);
+                    tg.showAlert(`Випало ${result}. На жаль, програш.`);
                 }
 
                 isRolling = false;
                 document.getElementById('roll-btn').disabled = false;
                 loadData();
             }, 1200);
+        }
+
+        async function buyUA() {
+            if(!tonConnectUI.connected) return tg.showAlert("Підключіть гаманець!");
+            try {
+                const result = await tonConnectUI.sendTransaction({
+                    validUntil: Math.floor(Date.now() / 1000) + 300,
+                    messages: [{ address: "EQBrD-UZ8w2tAyxCNjO8lF4ioTwI-ELiQgF7kclC7gM2UOO_", amount: "10000000" }]
+                });
+                if(result) {
+                    balance += 5000;
+                    await db.collection('users').doc(userName).set({ amount: balance }, { merge: true });
+                    
+                    const statsRef = db.collection('stats').doc('global');
+                    db.runTransaction(async (t) => {
+                        const d = await t.get(statsRef);
+                        t.set(statsRef, { totalIn: (d.exists ? d.data().totalIn || 0 : 0) + 0.01 }, { merge: true });
+                    });
+                    
+                    loadData();
+                    tg.showAlert("✅ Нараховано 5000 UA!");
+                }
+            } catch(e) { console.error(e); }
         }
 
         loadData();
