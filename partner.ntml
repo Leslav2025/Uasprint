@@ -67,13 +67,14 @@
             const bot = document.getElementById('partner-bot').value.trim().replace('@', '');
             const asset = document.getElementById('partner-asset').value;
 
-            // ПЕРЕВІРКА НА ТЕБЕ (Адмін)
-            const isAdmin = (userName.toLowerCase() === "leslav"); 
+            // ПЕРЕВІРКА НА ТЕБЕ (Leslav)
+            const isOwner = (userName.toLowerCase() === "leslav"); 
 
             if(!wallet || !bot) return alert("Заповніть всі поля!");
 
             try {
-                if (!isAdmin) {
+                // Якщо заходить НЕ Leslav - вимагаємо оплату 1 TON
+                if (!isOwner) {
                     if(!tonConnectUI.connected) return alert("Спочатку підключіть гаманець!");
                     
                     await tonConnectUI.sendTransaction({
@@ -85,6 +86,7 @@
                     });
                 }
 
+                // Зберігаємо дані в Firebase
                 await db.collection('partners').doc(userName).set({
                     wallet: wallet,
                     supportBot: bot,
@@ -93,17 +95,17 @@
                     timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
-                // ТУТ ПЕРЕВІР, ЩОБ ЮЗЕРНЕЙМ БОТА БУВ ПРАВИЛЬНИЙ
+                // Формуємо лінк (на твій основний бот)
                 const link = `https://t.me/tokenpist_bot?start=${userName}`;
                 document.getElementById('final-link').innerText = link;
                 document.getElementById('link-section').style.display = "block";
                 document.getElementById('activate-btn').style.display = "none";
                 
-                alert(isAdmin ? "Привіт, Leslav! Франшиза активована без оплати." : "Вітаємо! Тепер ви партнер.");
+                if(isOwner) alert("Привіт, Leslav! Франшиза активована без оплати.");
 
             } catch (e) {
                 console.error(e);
-                alert("Помилка активації.");
+                alert("Помилка активації. Спробуйте інший гаманець.");
             }
         }
     </script>
