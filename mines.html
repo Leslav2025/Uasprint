@@ -3,42 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>UA MINES | PLAY & WIN</title>
-    
+    <title>UA MINES</title>
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-
     <style>
         :root { --gold: #ffd700; --bg: #0b101b; --card: #151b2b; }
         body { background: var(--bg); color: white; font-family: sans-serif; margin: 0; padding: 15px; text-align: center; }
-        
-        /* ВЕРХНЯ ПАНЕЛЬ */
         .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .back-btn { text-decoration: none; color: var(--gold); font-weight: bold; font-size: 14px; }
-        #ton-connect-button { transform: scale(0.8); }
-
-        .balance-box { background: var(--card); border: 1px solid var(--gold); padding: 10px; border-radius: 10px; margin-bottom: 10px; font-weight: bold; color: var(--gold); font-size: 18px; }
-        
-        .personal-stats { display: flex; justify-content: space-around; background: rgba(255,255,255,0.05); padding: 8px; border-radius: 8px; margin-bottom: 15px; font-size: 10px; }
-        .stat-v { color: var(--gold); display: block; font-size: 14px; font-weight: bold; }
-
+        .back-btn { text-decoration: none; color: var(--gold); font-weight: bold; font-size: 14px; padding: 5px 10px; border: 1px solid var(--gold); border-radius: 8px; }
+        .balance-box { background: var(--card); border: 1px solid var(--gold); padding: 15px; border-radius: 12px; margin-bottom: 10px; font-weight: bold; color: var(--gold); font-size: 20px; box-shadow: 0 0 15px rgba(255,215,0,0.1); }
+        .personal-stats { display: flex; justify-content: space-around; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 10px; margin-bottom: 20px; font-size: 10px; border: 1px solid rgba(255,255,255,0.1); }
+        .stat-v { color: var(--gold); display: block; font-size: 14px; font-weight: bold; margin-top: 3px; }
         .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; max-width: 320px; margin: 0 auto; }
-        .cell { width: 60px; height: 60px; background: var(--card); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; border: 1px solid #333; transition: 0.2s; }
-        .cell:active { transform: scale(0.9); }
-
-        .controls { margin-top: 20px; max-width: 320px; margin-left: auto; margin-right: auto; }
+        .cell { width: 60px; height: 60px; background: var(--card); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; border: 1px solid #333; }
+        .controls { margin-top: 20px; max-width: 320px; margin: 20px auto 0; }
         input { background: var(--card); border: 1px solid #444; color: white; padding: 12px; border-radius: 10px; width: 100%; box-sizing: border-box; margin-bottom: 10px; text-align: center; font-size: 18px; }
         .btn { background: var(--gold); color: black; border: none; padding: 15px; border-radius: 10px; font-weight: bold; width: 100%; cursor: pointer; font-size: 16px; text-transform: uppercase; }
-        
-        .buy-ua-btn { background: transparent; border: 1px solid #4caf50; color: #4caf50; padding: 8px; border-radius: 8px; font-size: 11px; margin-top: 10px; width: 100%; cursor: pointer; }
+        .buy-btn { background: transparent; border: 1px solid #4caf50; color: #4caf50; padding: 10px; border-radius: 10px; font-size: 12px; margin-top: 10px; width: 100%; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div class="top-bar">
-        <a href="index.html" class="back-btn">⬅️ ВИХІД</a>
+        <a href="index.html" class="back-btn">⬅️ ХАБ</a>
         <div id="ton-connect-button"></div>
     </div>
 
@@ -53,12 +42,11 @@
 
     <div class="controls">
         <input type="number" id="bet-amount" value="100">
-        <button class="btn" id="main-btn" onclick="startGame()">ПОСТАВИТИ</button>
-        <button class="buy-ua-btn" onclick="buyUA()">➕ КУПИТИ 1000 UA (0.01 TON)</button>
+        <button class="btn" onclick="startGame()">ГРАТИ</button>
+        <button class="buy-btn" onclick="buyUA()">⚡ ПОПОВНИТИ +1000 UA (0.01 TON)</button>
     </div>
 
     <script>
-        // Конфіг Firebase
         const firebaseConfig = { 
             apiKey: "AIzaSyAYt_bjoLkBBE6LRTKgvbncm_O-rM_K16o", 
             authDomain: "ualottery.firebaseapp.com", 
@@ -67,10 +55,9 @@
         };
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
-        
-        // Ініціалізація TON Connect
+
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-            manifestUrl: 'https://gayder.github.io/tonconnect-manifest.json', // Заміни на свій прямий шлях
+            manifestUrl: 'https://gayder.github.io/tonconnect-manifest.json',
             buttonRootId: 'ton-connect-button'
         });
 
@@ -78,7 +65,6 @@
         const userId = tg.initDataUnsafe.user ? tg.initDataUnsafe.user.id.toString() : "guest";
         let currentBalance = 0;
 
-        // Живе оновлення даних
         db.collection('users').doc(userId).onSnapshot((doc) => {
             if (doc.exists) {
                 const d = doc.data();
@@ -86,35 +72,34 @@
                 document.getElementById('user-balance').innerText = currentBalance.toLocaleString();
                 document.getElementById('stat-games').innerText = d.total_games || 0;
                 document.getElementById('stat-total-won').innerText = (d.total_won || 0).toLocaleString();
-            } else {
-                db.collection('users').doc(userId).set({ name: "Гравець", balance: 0, total_games: 0, total_won: 0 });
             }
         });
 
-        // Покупка UA за TON
         async function buyUA() {
+            // Використовуємо твою адресу, яку видно на скріні
+            const myWallet = "UQAWV7e4o5pzIWm3PfDQr3l96epyBezSn7dPjpCJ8GwAwnh9"; 
+            
             const transaction = {
-                validUntil: Math.floor(Date.now() / 1000) + 60,
-                messages: [{ address: "ТВІЙ_ГАМАНЕЦЬ_ТУТ", amount: "10000000" }] // 0.01 TON
+                validUntil: Math.floor(Date.now() / 1000) + 300,
+                messages: [{ address: myWallet, amount: "10000000" }]
             };
+
             try {
-                await tonConnectUI.sendTransaction(transaction);
-                // Якщо успішно - нараховуємо 1000 UA
-                await db.collection('users').doc(userId).update({
-                    balance: firebase.firestore.FieldValue.increment(1000)
-                });
-                db.collection('global_stats').doc('counters').set({
-                    total_ton_in: firebase.firestore.FieldValue.increment(0.01)
-                }, {merge: true});
-                alert("Поповнено! +1000 UA");
-            } catch (e) {
-                alert("Помилка оплати");
-            }
+                const result = await tonConnectUI.sendTransaction(transaction);
+                if (result) {
+                    await db.collection('users').doc(userId).update({
+                        balance: firebase.firestore.FieldValue.increment(1000)
+                    });
+                    db.collection('global_stats').doc('counters').set({
+                        total_ton_in: firebase.firestore.FieldValue.increment(0.01)
+                    }, {merge: true});
+                }
+            } catch (e) { alert("Оплата скасована"); }
         }
 
         async function startGame() {
             const bet = parseInt(document.getElementById('bet-amount').value);
-            if (bet > currentBalance || bet <= 0) return alert("Недостатньо UA! Поповни баланс через TON.");
+            if (bet > currentBalance || bet <= 0) return alert("Мало UA! Поповни через TON.");
 
             await db.collection('users').doc(userId).update({
                 balance: firebase.firestore.FieldValue.increment(-bet),
@@ -125,7 +110,6 @@
                 total_ua_in: firebase.firestore.FieldValue.increment(bet)
             }, {merge: true});
 
-            alert("Гра почалася! Ставка " + bet + " UA");
             renderGrid();
         }
 
@@ -135,7 +119,7 @@
             for (let i = 0; i < 25; i++) {
                 const cell = document.createElement('div');
                 cell.className = 'cell';
-                cell.onclick = () => { cell.innerHTML = '💎'; cell.style.borderColor = '#4caf50'; };
+                cell.onclick = () => { cell.innerHTML = '💎'; };
                 grid.appendChild(cell);
             }
         }
