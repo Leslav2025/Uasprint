@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UA DICE - КУБИКИ</title>
+    <title>UA DICE - КУБИК</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
@@ -12,78 +12,58 @@
     <style>
         body { background: #0b101b; color: white; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; padding: 20px; margin: 0; min-height: 100vh; }
         .main { background: linear-gradient(145deg, #151b2b, #1e263d); padding: 25px; border-radius: 24px; width: 100%; max-width: 380px; border: 1px solid #2a3454; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.6); position: relative; }
+        
         .back-link { position: absolute; top: 15px; left: 20px; color: #ffd700; text-decoration: none; font-size: 12px; font-weight: bold; z-index: 10; }
+        .withdraw-link { position: absolute; top: 15px; right: 20px; color: #ffd700; text-decoration: none; font-size: 12px; font-weight: bold; border: 1px solid #ffd700; padding: 4px 8px; border-radius: 8px; z-index: 10; }
         
-        .title-dice { font-size: 26px; font-weight: 900; margin: 25px 0 5px 0; background: linear-gradient(90deg, #ff4b2b, #ff416c); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .subtitle { font-size: 10px; opacity: 0.5; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 20px; }
-
-        /* 3D КУБ */
-        .scene { width: 100px; height: 100px; margin: 30px auto; perspective: 600px; }
-        .cube { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 2s cubic-bezier(0.17, 0.67, 0.83, 0.67); }
-        .cube-face { position: absolute; width: 100px; height: 100px; background: white; border: 2px solid #ddd; display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: bold; color: #333; border-radius: 15px; box-shadow: inset 0 0 15px rgba(0,0,0,0.1); }
+        .title-dice { font-size: 26px; font-weight: 900; margin: 30px 0 5px 0; color: #ff4b2b; }
         
-        .front  { transform: rotateY(0deg) translateZ(50px); }
-        .back   { transform: rotateY(180deg) translateZ(50px); }
-        .right  { transform: rotateY(90deg) translateZ(50px); }
-        .left   { transform: rotateY(-90deg) translateZ(50px); }
-        .top    { transform: rotateX(90deg) translateZ(50px); }
-        .bottom { transform: rotateX(-90deg) translateZ(50px); }
+        /* КУБИК */
+        .dice-container { height: 120px; display: flex; justify-content: center; align-items: center; margin: 30px 0; }
+        #dice { width: 80px; height: 80px; background: white; border-radius: 15px; display: flex; justify-content: center; align-items: center; font-size: 40px; color: #000; box-shadow: 0 0 20px rgba(255,255,255,0.2); transition: 0.5s; }
+        .roll-anim { animation: roll 0.5s infinite; }
+        @keyframes roll { 0% { transform: rotate(0deg); } 25% { transform: rotate(90deg) scale(1.1); } 50% { transform: rotate(180deg); } 75% { transform: rotate(270deg) scale(1.1); } 100% { transform: rotate(360deg); } }
 
-        .result-text { margin: 20px 0; font-size: 18px; font-weight: bold; min-height: 24px; color: #ffd700; }
+        #roll-btn { background: #ff4b2b; color: white; border: none; padding: 18px; width: 100%; font-weight: 900; border-radius: 16px; cursor: pointer; text-transform: uppercase; font-size: 16px; box-shadow: 0 5px 15px rgba(255, 75, 43, 0.3); }
+        #roll-btn:disabled { opacity: 0.5; }
 
-        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-        .btn-bet { background: rgba(255,255,255,0.05); border: 1px solid #2a3454; color: white; padding: 15px; border-radius: 12px; cursor: pointer; font-weight: bold; transition: 0.3s; }
-        .btn-bet.active { border-color: #ffd700; background: rgba(255, 215, 0, 0.1); box-shadow: 0 0 10px rgba(255,215,0,0.2); }
-        
+        .info-box { font-size: 14px; margin-bottom: 10px; opacity: 0.8; margin-top: 20px; }
         select { background: #0b101b; color: #ffd700; border: 1px solid #2a3454; padding: 12px; border-radius: 12px; width: 100%; font-weight: bold; margin-bottom: 15px; outline: none; }
         
-        #play-btn { background: linear-gradient(90deg, #ff4b2b, #ff416c); color: white; border: none; padding: 18px; width: 100%; font-weight: 900; border-radius: 16px; cursor: pointer; text-transform: uppercase; font-size: 16px; box-shadow: 0 4px 15px rgba(255, 75, 43, 0.3); }
-        #play-btn:active { transform: scale(0.98); }
-        
-        #balance-box { font-size: 14px; margin-bottom: 10px; opacity: 0.8; }
+        .multiplier-info { font-size: 11px; opacity: 0.6; margin-top: 10px; }
     </style>
 </head>
 <body>
     <div class="main">
         <a href="index.html" class="back-link">← НАЗАД</a>
-        <div id="ton-connect" style="display: flex; justify-content: center; margin-bottom: 15px;"></div>
+        <a href="withdraw.html" class="withdraw-link">💳 ВИВІД</a>
+        
+        <div id="ton-connect" style="display: flex; justify-content: center; margin-bottom: 15px; margin-top: 20px;"></div>
         
         <div class="title-dice">UA DICE</div>
-        <div class="subtitle">Ризикни та виграй</div>
+        <div class="info-box">Баланс: <span id="user-balance" style="color:#ffd700">...</span> UA</div>
 
-        <div id="balance-box">Баланс: <span id="user-balance" style="color:#ffd700">...</span> UA</div>
-
-        <div class="scene">
-            <div class="cube" id="cube">
-                <div class="cube-face front">1</div>
-                <div class="cube-face back">6</div>
-                <div class="cube-face right">3</div>
-                <div class="cube-face left">4</div>
-                <div class="cube-face top">2</div>
-                <div class="cube-face bottom">5</div>
-            </div>
-        </div>
-
-        <div class="result-text" id="result">Зробіть прогноз</div>
-
-        <div class="controls">
-            <button class="btn-bet" id="btn-less" onclick="setChoice('less')">МЕНШЕ 4</button>
-            <button class="btn-bet active" id="btn-more" onclick="setChoice('more')">БІЛЬШЕ 3</button>
+        <div class="dice-container">
+            <div id="dice">🎲</div>
         </div>
 
         <select id="bet-amount">
-            <option value="0.01">0.01 TON (ПРИЗ 200 UA)</option>
-            <option value="0.02">0.02 TON (ПРИЗ 400 UA)</option>
+            <option value="0.01">СТАВКА: 0.01 TON</option>
+            <option value="0.02">СТАВКА: 0.02 TON</option>
         </select>
 
-        <button id="play-btn" onclick="playDice()">КИНУТИ КУБИК</button>
+        <button id="roll-btn" onclick="rollDice()">КИНУТИ КУБИК</button>
+
+        <div class="multiplier-info">
+            1-2: 0 UA | 3: x1.5 | 4: x2 | 5: x3 | 6: x5
+        </div>
     </div>
 
     <script>
-        const tg = window.Telegram.WebApp; tg.ready(); tg.expand();
+        const tg = window.Telegram.WebApp;
         let userName = (tg.initDataUnsafe && tg.initDataUnsafe.user) ? (tg.initDataUnsafe.user.username || tg.initDataUnsafe.user.first_name) : "Гравець";
-        let userChoice = 'more';
         let balance = 0;
+        let isRolling = false;
 
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://leslav2025.github.io/Uasprint/tonconnect-manifest.json',
@@ -99,11 +79,7 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        function setChoice(choice) {
-            userChoice = choice;
-            document.getElementById('btn-less').classList.toggle('active', choice === 'less');
-            document.getElementById('btn-more').classList.toggle('active', choice === 'more');
-        }
+        const diceFaces = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
 
         async function loadData() {
             const doc = await db.collection('users').doc(userName).get();
@@ -111,11 +87,9 @@
             document.getElementById('user-balance').innerText = balance.toLocaleString();
         }
 
-        async function playDice() {
-            if (!tonConnectUI.connected) return alert("Підключіть гаманець!");
-            
+        async function rollDice() {
+            if (!tonConnectUI.connected || isRolling) return alert("Підключіть гаманець!");
             const bet = parseFloat(document.getElementById('bet-amount').value);
-            const prize = bet === 0.01 ? 200 : 400;
 
             try {
                 await tonConnectUI.sendTransaction({
@@ -123,38 +97,48 @@
                     messages: [{ address: "EQBrD-UZ8w2tAyxCNjO8lF4ioTwI-ELiQgF7kclC7gM2UOO_", amount: (bet * 1000000000).toString() }]
                 });
 
-                // Статистика для Хабу
                 const statsRef = db.collection('stats').doc('global');
                 db.runTransaction(async (t) => {
                     const d = await t.get(statsRef);
                     t.set(statsRef, { totalIn: (d.exists ? d.data().totalIn || 0 : 0) + bet }, { merge: true });
                 });
 
-                // Анімація
-                const cube = document.getElementById('cube');
-                const result = Math.floor(Math.random() * 6) + 1;
-                const rotations = { 1: 'rotateX(0deg) rotateY(0deg)', 2: 'rotateX(-90deg) rotateY(0deg)', 3: 'rotateX(0deg) rotateY(-90deg)', 4: 'rotateX(0deg) rotateY(90deg)', 5: 'rotateX(90deg) rotateY(0deg)', 6: 'rotateX(180deg) rotateY(0deg)' };
-                
-                document.getElementById('result').innerText = "Кубик летить...";
-                cube.style.transform = `rotateX(1440deg) rotateY(1440deg) ${rotations[result]}`;
-
-                setTimeout(async () => {
-                    let isWin = (userChoice === 'more' && result > 3) || (userChoice === 'less' && result < 4);
-                    
-                    if (isWin) {
-                        balance += prize;
-                        document.getElementById('result').innerText = `🔥 ВИПАЛО ${result}: +${prize} UA!`;
-                        document.getElementById('result').style.color = "#4caf50";
-                        confetti({ particleCount: 150, spread: 60, origin: { y: 0.7 } });
-                        await db.collection('users').doc(userName).set({ amount: balance }, { merge: true });
-                    } else {
-                        document.getElementById('result').innerText = `🎲 ВИПАЛО ${result}: НЕ ВГАДАЛИ`;
-                        document.getElementById('result').style.color = "#ff4b2b";
-                    }
-                    loadData();
-                }, 2000);
-
+                startRoll(bet);
             } catch (e) { console.error(e); }
+        }
+
+        function startRoll(bet) {
+            isRolling = true;
+            document.getElementById('roll-btn').disabled = true;
+            const diceEl = document.getElementById('dice');
+            diceEl.classList.add('roll-anim');
+
+            setTimeout(async () => {
+                diceEl.classList.remove('roll-anim');
+                const result = Math.floor(Math.random() * 6) + 1; // 1 to 6
+                diceEl.innerText = diceFaces[result - 1];
+
+                let winUA = 0;
+                let baseUA = bet === 0.01 ? 100 : 220;
+
+                if (result === 3) winUA = Math.floor(baseUA * 1.5);
+                else if (result === 4) winUA = baseUA * 2;
+                else if (result === 5) winUA = baseUA * 3;
+                else if (result === 6) winUA = baseUA * 5;
+
+                if (winUA > 0) {
+                    balance += winUA;
+                    await db.collection('users').doc(userName).set({ amount: balance }, { merge: true });
+                    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+                    tg.showAlert(`Випало ${result}! Ви виграли ${winUA} UA!`);
+                } else {
+                    tg.showAlert(`Випало ${result}. Не пощастило, спробуйте ще!`);
+                }
+
+                isRolling = false;
+                document.getElementById('roll-btn').disabled = false;
+                loadData();
+            }, 1500);
         }
 
         loadData();
