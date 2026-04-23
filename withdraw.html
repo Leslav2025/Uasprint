@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UA WITHDRAW - ЧЕРЕЗ БОТА</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <style>
+        body { background: #0b101b; color: white; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; padding: 20px; margin: 0; }
+        .main { background: linear-gradient(145deg, #151b2b, #1e263d); padding: 25px; border-radius: 24px; width: 100%; max-width: 380px; border: 1px solid #2a3454; text-align: center; }
+        .back-link { position: absolute; top: 15px; left: 20px; color: #ffd700; text-decoration: none; font-size: 12px; font-weight: bold; }
+        .title { font-size: 24px; font-weight: 900; margin: 25px 0; color: #ffd700; }
+        .balance-card { background: rgba(0,0,0,0.3); padding: 25px; border-radius: 16px; border: 1px solid #2a3454; margin-bottom: 20px; }
+        #user-balance { font-size: 36px; font-weight: bold; color: #ffd700; }
+        
+        #withdraw-btn { background: #ffd700; color: #000; border: none; padding: 18px; width: 100%; font-weight: 900; border-radius: 14px; cursor: pointer; text-transform: uppercase; transition: 0.3s; }
+        #withdraw-btn:disabled { background: #2a3454; color: #555; cursor: not-allowed; }
+        .info-text { font-size: 13px; opacity: 0.7; margin-top: 20px; line-height: 1.5; text-align: left; }
+    </style>
+</head>
+<body>
+    <div class="main">
+        <a href="index.html" class="back-link">← НАЗАД</a>
+        <div class="title">ВИВЕДЕННЯ UA</div>
+        
+        <div class="balance-card">
+            <div style="font-size: 11px; opacity: 0.6; letter-spacing: 1px;">ДОСТУПНО ДО ВИВОДУ:</div>
+            <div id="user-balance">0</div>
+            <div style="color: #ffd700; font-weight: bold;">UA</div>
+        </div>
+
+        <button id="withdraw-btn" onclick="sendToBot()" disabled>ОФОРМИТИ ЗАЯВКУ</button>
+        
+        <div class="info-text">
+            📌 <b>Як це працює:</b><br>
+            1. Ви натискаєте кнопку виводу.<br>
+            2. Ваш ігровий баланс обнуляється.<br>
+            3. Вас перекине в чат з підтримкою.<br>
+            4. Надішліть боту сформоване повідомлення для виплати.
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        let userName = (tg.initDataUnsafe && tg.initDataUnsafe.user) ? (tg.initDataUnsafe.user.username || tg.initDataUnsafe.user.first_name) : "Гравець";
+        let currentBalance = 0;
+
+        const firebaseConfig = { 
+            apiKey: "AIzaSyAYt_bjoLkBBE6LRTKgvbncm_O-rM_K16o", 
+            authDomain: "ualottery.firebaseapp.com", 
+            projectId: "ualottery", 
+            appId: "1:960757780790:web:568c021958b4ec8f0d8bd6" 
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        async function loadBalance() {
+            const doc = await db.collection('users').doc(userName).get();
+            currentBalance = doc.exists ? doc.data().amount : 0;
+            document.getElementById('user-balance').innerText = currentBalance.toLocaleString();
+            
+            // Кнопка активна від 10,000 UA
+            if (currentBalance >= 10000) {
+                document.getElementById('withdraw-btn').disabled = false;
+            }
+        }
+
+        async function sendToBot() {
+            const confirmAction = confirm(`Увага! Ваш баланс ${currentBalance} UA буде обнулено, і ви перейдете до бота для виплати. Продовжити?`);
+            
+            if (confirmAction) {
+                try {
+                    const amountToWithdraw = currentBalance;
+
+                    // 1. Оновлюємо статистику виплат у Хабі
+                    const statsRef = db.collection('stats').doc('global');
+                    await db.runTransaction(async (t) => {
+                        const d = await t.get(statsRef);
+                        const oldOut = d.exists ? (d.data().totalOut || 0) : 0;
+                        t.set(statsRef, { totalOut: oldOut + amountToWithdraw }, { merge: true });
+                    });
+
+                    // 2. ОБНУЛЯЄМО рахунок у Firebase
+                    await db.collection('users').doc(userName).set({ amount: 0 }, { merge: true });
+
+                    // 3. Відправляємо в бота
+                    const message = encodeURIComponent(`Заявка на вивід: ${amountToWithdraw} UA. Користувач: @${userName}`);
+                    const botLink = `https://t.me/tokenpist_bot?text=${message}`;
+                    
+                    tg.openTelegramLink(botLink);
+                    
+                    // Закриваємо Mini App, щоб людина опинилась у чаті
+                    tg.close();
+
+                } catch (e) {
+                    alert("Помилка зв'язку з базою.");
+                }
+            }
+        }
+
+        loadBalance();
+    </script>
+</body>
+</html>
