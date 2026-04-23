@@ -9,14 +9,14 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <style>
         :root { --gold: #ffd700; --bg: #0b101b; --card: #151b2b; --text: #ffffff; }
-        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; padding: 12px; overflow-x: hidden; }
+        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; padding: 12px; overflow-x: hidden; -webkit-user-select: none; }
         
-        /* ВЕРХНЯ ПАНЕЛЬ: НІК + БАЛАНС */
+        /* ВЕРХНЯ ПАНЕЛЬ */
         .header-main { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
         .user-info { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: bold; color: var(--gold); }
-        .user-balance { background: rgba(255,215,0,0.1); border: 1px solid var(--gold); padding: 5px 12px; border-radius: 20px; color: var(--gold); font-weight: 900; font-size: 14px; }
+        .user-balance { background: rgba(255,215,0,0.1); border: 1px solid var(--gold); padding: 5px 15px; border-radius: 20px; color: var(--gold); font-weight: 900; font-size: 16px; box-shadow: 0 0 10px rgba(255, 215, 0, 0.2); }
 
-        /* СТАТИСТИКА ПРОЕКТУ */
+        /* СТАТИСТИКА */
         .hub-stats { 
             background: var(--card); border: 1px solid rgba(255, 215, 0, 0.2); 
             border-radius: 15px; padding: 10px; display: grid; 
@@ -30,37 +30,38 @@
         /* СІТКА ІГОР */
         .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
         .game-card { 
-            background: var(--card); border: 1px solid rgba(255, 215, 0, 0.1); 
-            border-radius: 12px; padding: 12px 5px; text-align: center; text-decoration: none; color: white; transition: 0.2s;
+            background: linear-gradient(145deg, #1e263d, #151b2b); border: 1px solid rgba(255, 215, 0, 0.1); 
+            border-radius: 16px; padding: 15px 5px; text-align: center; text-decoration: none; color: white; transition: 0.2s;
         }
-        .game-card:active { transform: scale(0.95); border-color: var(--gold); }
-        .game-icon { font-size: 24px; margin-bottom: 5px; }
-        .game-name { font-weight: bold; font-size: 9px; text-transform: uppercase; }
+        .game-card:active { transform: scale(0.9); border-color: var(--gold); }
+        .game-icon { font-size: 28px; margin-bottom: 8px; display: block; }
+        .game-name { font-weight: bold; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
 
-        /* ДОШКА ПОШАНИ */
+        /* ЛІДЕРБОРД */
         .leaderboard { background: var(--card); border: 1px solid rgba(255, 215, 0, 0.2); border-radius: 15px; padding: 12px; margin-bottom: 15px; }
-        .leader-title { color: var(--gold); font-size: 11px; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; }
-        .leader-item { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; }
-        .leader-rank { color: var(--gold); font-weight: bold; margin-right: 5px; }
+        .leader-title { color: var(--gold); font-size: 11px; font-weight: bold; text-transform: uppercase; margin-bottom: 10px; display: flex; align-items: center; gap: 5px; }
+        .leader-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; }
+        .leader-rank { color: var(--gold); font-weight: bold; margin-right: 8px; }
 
-        /* ВІДВІДУВАЧІ */
-        .visitors { text-align: center; font-size: 10px; color: #4caf50; font-weight: bold; text-transform: uppercase; padding: 10px; }
-        .dot { height: 6px; width: 6px; background: #4caf50; border-radius: 50%; display: inline-block; margin-right: 5px; box-shadow: 0 0 5px #4caf50; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
-
+        /* ПАРТНЕРКА */
         .partner-banner {
             background: linear-gradient(90deg, #1a2a4a, #151b2b);
             border: 1px solid var(--gold); border-radius: 15px; padding: 15px;
             text-decoration: none; color: white; display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 15px;
         }
+
+        .visitors { text-align: center; font-size: 10px; color: #4caf50; font-weight: bold; text-transform: uppercase; padding: 10px; opacity: 0.8; }
+        .dot { height: 6px; width: 6px; background: #4caf50; border-radius: 50%; display: inline-block; margin-right: 5px; box-shadow: 0 0 8px #4caf50; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.2); } 100% { opacity: 1; transform: scale(1); } }
     </style>
 </head>
 <body>
 
     <div class="header-main">
         <div class="user-info">
-            <span>👤</span>
-            <span id="user-name">ЗАВАНТАЖЕННЯ...</span>
+            <span>💎</span>
+            <span id="user-name">ГРАВЕЦЬ</span>
         </div>
         <div class="user-balance">
             <span id="user-balance">0</span> UA
@@ -70,38 +71,40 @@
     <div class="hub-stats">
         <div class="stat-item">
             <span class="stat-value" id="stat-ton">0.00 TON</span>
-            <span class="stat-label">ЗАЙШЛО В ПРОЕКТ</span>
+            <span class="stat-label">ІНВЕСТОВАНО</span>
         </div>
         <div class="stat-item">
             <span class="stat-value" id="stat-ua">0 UA</span>
-            <span class="stat-label">ВИПЛАЧЕНО ГРАВЦЯМ</span>
+            <span class="stat-label">ВИПЛАЧЕНО</span>
         </div>
     </div>
 
     <div class="grid">
-        <a href="dice.html" class="game-card"><div class="game-icon">🎲</div><div class="game-name">DICE</div></a>
-        <a href="mines.html" class="game-card"><div class="game-icon">💣</div><div class="game-name">MINES</div></a>
-        <a href="crash.html" class="game-card"><div class="game-icon">📈</div><div class="game-name">CRASH</div></a>
-        <a href="penalty.html" class="game-card"><div class="game-icon">⚽</div><div class="game-name">PENALTY</div></a>
-        <a href="wheel.html" class="game-card"><div class="game-icon">🎡</div><div class="game-name">WHEEL</div></a>
-        <a href="lottery.html" class="game-card"><div class="game-icon">🎫</div><div class="game-name">LOTTERY</div></a>
+        <a href="dice.html" class="game-card"><span class="game-icon">🎲</span><span class="game-name">DICE</span></a>
+        <a href="mines.html" class="game-card"><span class="game-icon">💣</span><span class="game-name">MINES</span></a>
+        <a href="crash.html" class="game-card"><span class="game-icon">🚀</span><span class="game-name">CRASH</span></a>
+        <a href="penalty.html" class="game-card"><span class="game-icon">⚽</span><span class="game-name">PENALTY</span></a>
+        <a href="wheel.html" class="game-card"><span class="game-icon">🎡</span><span class="game-name">WHEEL</span></a>
+        <a href="lottery.html" class="game-card"><span class="game-icon">🎫</span><span class="game-name">LOTTERY</span></a>
     </div>
 
     <div class="leaderboard">
-        <div class="leader-title">🏆 ДОШКА ПОШАНИ</div>
-        <div id="leader-list"></div>
+        <div class="leader-title">🏆 ТОП ПЕРЕМОЖЦІВ</div>
+        <div id="leader-list">
+            <div style="text-align:center; opacity:0.5; font-size:12px;">Завантаження лідерів...</div>
+        </div>
     </div>
 
-    <a href="partner.ntml" class="partner-banner">
+    <a href="partner.html" class="partner-banner">
         <div style="flex-grow: 1;">
             <h3 style="margin:0; color:var(--gold); font-size:14px;">ВЛАСНЕ КАЗИНО 🚀</h3>
-            <p style="margin:3px 0 0; font-size:10px; opacity:0.7;">Отримуй 90% від ставок гравців</p>
+            <p style="margin:3px 0 0; font-size:10px; opacity:0.7;">Заробляй разом з UA GOLDEN HUB</p>
         </div>
         <div style="font-size: 24px;">💰</div>
     </a>
 
     <div class="visitors">
-        <span class="dot"></span> ЗАРАЗ ГРАЮТЬ: <span id="v-count">144</span>
+        <span class="dot"></span> ОНЛАЙН ГРАВЦІВ: <span id="v-count">124</span>
     </div>
 
     <script>
@@ -117,41 +120,43 @@
         tg.expand();
 
         const user = tg.initDataUnsafe.user;
-        const userId = user ? user.id.toString() : "guest";
-        const userName = user ? (user.username || user.first_name) : "GAYDER";
+        const userName = user ? (user.username || user.first_name) : "Гравець";
 
         document.getElementById('user-name').innerText = userName.toUpperCase();
 
         function startLiveSync() {
-            // СЛУХАЄМО БАЛАНС ГРАВЦЯ (Живе оновлення)
-            db.collection('users').doc(userId).onSnapshot((doc) => {
+            // ОНОВЛЕННЯ БАЛАНСУ ГРАВЦЯ (використовуємо 'amount' для синхронізації з іграми)
+            db.collection('users').doc(userName).onSnapshot((doc) => {
                 if (doc.exists) {
-                    document.getElementById('user-balance').innerText = doc.data().balance || 0;
+                    const bal = doc.data().amount || 0;
+                    document.getElementById('user-balance').innerText = bal.toLocaleString();
                 } else {
-                    db.collection('users').doc(userId).set({ name: userName, balance: 0 });
+                    db.collection('users').doc(userName).set({ amount: 0 }, { merge: true });
                 }
             });
 
-            // СЛУХАЄМО ГЛОБАЛЬНУ СТАТИСТИКУ
-            db.collection('global_stats').doc('counters').onSnapshot((doc) => {
+            // ОНОВЛЕННЯ СТАТИСТИКИ ПРОЕКТУ
+            db.collection('stats').doc('global').onSnapshot((doc) => {
                 if (doc.exists) {
                     const s = doc.data();
-                    document.getElementById('stat-ton').innerText = (s.total_ton_in || 0).toFixed(2) + " TON";
-                    document.getElementById('stat-ua').innerText = (s.total_ua_out || 0).toLocaleString() + " UA";
+                    document.getElementById('stat-ton').innerText = (s.totalIn || 0).toFixed(2) + " TON";
+                    // Приблизна статистика виплат (можна налаштувати логіку)
+                    document.getElementById('stat-ua').innerText = (s.totalOut || 0).toLocaleString() + " UA";
                 }
             });
 
-            // СЛУХАЄМО ТОП ГРАВЦІВ
-            db.collection('users').orderBy('balance', 'desc').limit(3).onSnapshot((snap) => {
+            // ОНОВЛЕННЯ ЛІДЕРБОРДУ
+            db.collection('users').orderBy('amount', 'desc').limit(5).onSnapshot((snap) => {
                 const lList = document.getElementById('leader-list');
                 lList.innerHTML = '';
                 let rank = 1;
                 snap.forEach(l => {
                     const d = l.data();
+                    const name = l.id;
                     lList.innerHTML += `
                         <div class="leader-item">
-                            <span><span class="leader-rank">#${rank}</span> ${d.name || 'Гравець'}</span>
-                            <span style="color:var(--gold); font-weight:bold;">${d.balance || 0} UA</span>
+                            <span><span class="leader-rank">#${rank}</span> ${name}</span>
+                            <span style="color:var(--gold); font-weight:bold;">${(d.amount || 0).toLocaleString()} UA</span>
                         </div>`;
                     rank++;
                 });
@@ -160,11 +165,12 @@
 
         startLiveSync();
 
-        // Імітація активності
+        // Живий лічильник онлайну
         setInterval(() => {
             let c = parseInt(document.getElementById('v-count').innerText);
-            document.getElementById('v-count').innerText = c + (Math.random() > 0.5 ? 1 : -1);
-        }, 4000);
+            let change = Math.floor(Math.random() * 3) - 1; // -1, 0, або +1
+            document.getElementById('v-count').innerText = Math.max(50, c + change);
+        }, 3000);
     </script>
 </body>
 </html>
