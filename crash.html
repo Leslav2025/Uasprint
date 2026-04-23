@@ -9,36 +9,36 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <style>
-        body { background: #0b101b; color: white; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; padding: 20px; margin: 0; min-height: 100vh; overflow: hidden; }
-        .main { background: linear-gradient(145deg, #151b2b, #1e263d); padding: 25px; border-radius: 24px; width: 100%; max-width: 380px; border: 1px solid #2a3454; text-align: center; position: relative; box-shadow: 0 20px 40px rgba(0,0,0,0.6); }
+        body { background: #0b101b; color: white; font-family: 'Segoe UI', sans-serif; text-align: center; margin: 0; padding: 20px; overflow: hidden; }
+        .main { background: linear-gradient(145deg, #151b2b, #1e263d); padding: 25px; border-radius: 24px; max-width: 380px; margin: auto; border: 1px solid #2a3454; position: relative; box-shadow: 0 20px 40px rgba(0,0,0,0.6); }
         
-        /* Кнопки навігації */
-        .back-link { position: absolute; top: 15px; left: 20px; color: #ffd700; text-decoration: none; font-size: 12px; font-weight: bold; z-index: 10; }
-        .withdraw-link { position: absolute; top: 15px; right: 20px; color: #ffd700; text-decoration: none; font-size: 12px; font-weight: bold; border: 1px solid #ffd700; padding: 4px 8px; border-radius: 8px; z-index: 10; }
-        
-        .game-area { height: 200px; background: rgba(0,0,0,0.3); border-radius: 16px; margin: 20px 0; position: relative; overflow: hidden; border: 1px dashed #2a3454; }
-        .multiplier { font-size: 48px; font-weight: 900; color: #ffd700; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 5; text-shadow: 0 0 20px rgba(255,215,0,0.4); }
-        
-        .rocket { position: absolute; bottom: 20px; left: 20px; font-size: 40px; transition: transform 0.1s linear; display: none; }
-        .rocket.fly { display: block; animation: shake 0.1s infinite; }
-        @keyframes shake { 0% { transform: translate(0,0); } 50% { transform: translate(2px, -2px); } 100% { transform: translate(0,0); } }
+        .nav-links { display: flex; justify-content: space-between; margin-bottom: 10px; }
+        .nav-btn { color: #ffd700; text-decoration: none; font-size: 12px; font-weight: bold; border: 1px solid #ffd700; padding: 5px 10px; border-radius: 8px; }
 
-        #action-btn { background: #4caf50; color: white; border: none; padding: 18px; width: 100%; font-weight: 900; border-radius: 16px; cursor: pointer; text-transform: uppercase; font-size: 18px; display: none; box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4); }
-        #start-btn { background: linear-gradient(90deg, #ff4b2b, #ff416c); color: white; border: none; padding: 18px; width: 100%; font-weight: 900; border-radius: 16px; cursor: pointer; text-transform: uppercase; font-size: 16px; }
+        .game-area { height: 200px; background: rgba(0,0,0,0.4); border-radius: 16px; margin: 15px 0; position: relative; overflow: hidden; border: 2px solid #2a3454; }
+        .multiplier { font-size: 50px; font-weight: 900; color: #ffd700; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 5; text-shadow: 0 0 20px rgba(255,215,0,0.5); }
+        .rocket { position: absolute; bottom: 20px; left: 20px; font-size: 40px; display: none; }
+
+        .balance-box { background: rgba(255,215,0,0.1); padding: 12px; border-radius: 15px; border: 1px solid #ffd700; margin-bottom: 15px; font-size: 20px; color: #ffd700; font-weight: bold; }
         
-        .info-box { font-size: 14px; margin-bottom: 10px; opacity: 0.8; margin-top: 20px; }
-        select { background: #0b101b; color: #ffd700; border: 1px solid #2a3454; padding: 12px; border-radius: 12px; width: 100%; font-weight: bold; margin-bottom: 15px; outline: none; }
+        select { background: #1a2235; color: white; border: 1px solid #2a3454; padding: 12px; border-radius: 12px; width: 100%; font-weight: bold; margin-bottom: 10px; outline: none; }
+        
+        #start-btn { background: linear-gradient(90deg, #ff4b2b, #ff416c); color: white; border: none; padding: 18px; width: 100%; font-weight: 900; border-radius: 16px; cursor: pointer; text-transform: uppercase; }
+        #cashout-btn { background: #28a745; color: white; border: none; padding: 18px; width: 100%; font-weight: 900; border-radius: 16px; cursor: pointer; text-transform: uppercase; display: none; box-shadow: 0 5px 15px rgba(40,167,69,0.4); }
+        
+        .btn-deposit { background: transparent; color: #4caf50; border: 1px solid #4caf50; font-size: 10px; margin-top: 15px; padding: 8px; border-radius: 10px; width: 100%; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
     <div class="main">
-        <a href="index.html" class="back-link">← НАЗАД</a>
-        <a href="withdraw.html" class="withdraw-link">💳 ВИВІД</a>
+        <div class="nav-links">
+            <a href="index.html" class="nav-btn">← НАЗАД</a>
+            <a href="withdraw.html" class="nav-btn">💳 ВИВІД</a>
+        </div>
+
+        <div id="ton-connect" style="display: flex; justify-content: center; margin-bottom: 10px;"></div>
         
-        <div id="ton-connect" style="display: flex; justify-content: center; margin-bottom: 15px; margin-top: 20px;"></div>
-        
-        <div style="font-size: 24px; font-weight: 900; color: #ff4b2b;">UA CRASH</div>
-        <div class="info-box">Баланс: <span id="user-balance" style="color:#ffd700">...</span> UA</div>
+        <div class="balance-box"><span id="user-balance">...</span> UA</div>
 
         <div class="game-area">
             <div id="multiplier" class="multiplier">x1.00</div>
@@ -46,12 +46,15 @@
         </div>
 
         <select id="bet-amount">
-            <option value="0.01">СТАВКА: 0.01 TON</option>
-            <option value="0.02">СТАВКА: 0.02 TON</option>
+            <option value="100">СТАВКА: 100 UA</option>
+            <option value="500">СТАВКА: 500 UA</option>
+            <option value="1000">СТАВКА: 1000 UA</option>
         </select>
 
         <button id="start-btn" onclick="startGame()">ЗАПУСТИТИ РАКЕТУ</button>
-        <button id="action-btn" onclick="cashOut()">ЗАБРАТИ UA</button>
+        <button id="cashout-btn" onclick="cashOut()">ЗАБРАТИ: 0 UA</button>
+
+        <button class="btn-deposit" onclick="buyUA()">➕ КУПИТИ 5000 UA (0.01 TON)</button>
     </div>
 
     <script>
@@ -63,6 +66,7 @@
         let crashPoint = 0;
         let gameInterval;
         let isRunning = false;
+        let currentBet = 0;
 
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://leslav2025.github.io/Uasprint/tonconnect-manifest.json',
@@ -75,71 +79,62 @@
             projectId: "ualottery", 
             appId: "1:960757780790:web:568c021958b4ec8f0d8bd6" 
         };
-        firebase.initializeApp(firebaseConfig);
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
         async function loadData() {
             const doc = await db.collection('users').doc(userName).get();
-            balance = doc.exists ? doc.data().amount : 0;
+            balance = doc.exists ? (doc.data().amount || 0) : 0;
             document.getElementById('user-balance').innerText = balance.toLocaleString();
         }
 
         async function startGame() {
-            if (!tonConnectUI.connected) return alert("Підключіть гаманець!");
-            const bet = parseFloat(document.getElementById('bet-amount').value);
+            currentBet = parseInt(document.getElementById('bet-amount').value);
+            if (balance < currentBet) return tg.showAlert("Мало UA! Поповни баланс.");
+            if (isRunning) return;
 
-            try {
-                await tonConnectUI.sendTransaction({
-                    validUntil: Math.floor(Date.now() / 1000) + 300,
-                    messages: [{ address: "EQBrD-UZ8w2tAyxCNjO8lF4ioTwI-ELiQgF7kclC7gM2UOO_", amount: (bet * 1000000000).toString() }]
-                });
+            // Списуємо ставку з балансу
+            balance -= currentBet;
+            await db.collection('users').doc(userName).set({ amount: balance }, { merge: true });
+            document.getElementById('user-balance').innerText = balance.toLocaleString();
 
-                const statsRef = db.collection('stats').doc('global');
-                db.runTransaction(async (t) => {
-                    const d = await t.get(statsRef);
-                    t.set(statsRef, { totalIn: (d.exists ? d.data().totalIn || 0 : 0) + bet }, { merge: true });
-                });
-
-                prepareGame();
-            } catch (e) { console.error(e); }
+            startFlying();
         }
 
-        function prepareGame() {
+        function startFlying() {
             isRunning = true;
             currentMult = 1.0;
             
-            // Логіка вибуху: більшість ігор закінчуються до x3.0, але є шанс на ікс
+            // Логіка крашу
             let rnd = Math.random();
-            if (rnd < 0.1) crashPoint = (1.0 + Math.random() * 0.5).toFixed(2); // Ранній вибух
-            else if (rnd < 0.8) crashPoint = (1.5 + Math.random() * 3).toFixed(2); // Середній політ
-            else crashPoint = (5.0 + Math.random() * 15).toFixed(2); // Джекпот-політ
+            if (rnd < 0.15) crashPoint = (1.01 + Math.random() * 0.3).toFixed(2); 
+            else if (rnd < 0.8) crashPoint = (1.4 + Math.random() * 2).toFixed(2);
+            else crashPoint = (3.5 + Math.random() * 10).toFixed(2);
 
             document.getElementById('start-btn').style.display = 'none';
-            document.getElementById('action-btn').style.display = 'block';
+            document.getElementById('cashout-btn').style.display = 'block';
             document.getElementById('rocket').style.display = 'block';
-            document.getElementById('rocket').innerText = "🚀";
-            
-            gameInterval = setInterval(updateGame, 100);
-        }
-
-        function updateGame() {
-            currentMult += 0.04; // Швидкість росту
-            document.getElementById('multiplier').innerText = `x${currentMult.toFixed(2)}`;
             document.getElementById('multiplier').style.color = "#ffd700";
             
-            let move = (currentMult - 1) * 25;
+            gameInterval = setInterval(updateFrame, 100);
+        }
+
+        function updateFrame() {
+            currentMult += 0.05; 
+            document.getElementById('multiplier').innerText = `x${currentMult.toFixed(2)}`;
+            
+            let move = (currentMult - 1) * 30;
             document.getElementById('rocket').style.transform = `translate(${move}px, -${move}px)`;
 
+            let currentWin = Math.floor(currentBet * currentMult);
+            document.getElementById('cashout-btn').innerText = `ЗАБРАТИ: ${currentWin} UA`;
+
             if (currentMult >= crashPoint) {
-                crash();
-            } else {
-                const bet = parseFloat(document.getElementById('bet-amount').value);
-                const winUA = Math.floor(currentMult * (bet === 0.01 ? 200 : 450)); // Трохи підняв виграш
-                document.getElementById('action-btn').innerText = `ЗАБРАТИ ${winUA} UA`;
+                boom();
             }
         }
 
-        function crash() {
+        function boom() {
             clearInterval(gameInterval);
             isRunning = false;
             document.getElementById('multiplier').innerText = "BOOM!";
@@ -148,9 +143,11 @@
             
             setTimeout(() => {
                 document.getElementById('start-btn').style.display = 'block';
-                document.getElementById('action-btn').style.display = 'none';
+                document.getElementById('cashout-btn').style.display = 'none';
                 document.getElementById('rocket').style.display = 'none';
-            }, 2000);
+                document.getElementById('rocket').innerText = "🚀";
+                document.getElementById('multiplier').innerText = "x1.00";
+            }, 2500);
         }
 
         async function cashOut() {
@@ -158,18 +155,39 @@
             clearInterval(gameInterval);
             isRunning = false;
 
-            const bet = parseFloat(document.getElementById('bet-amount').value);
-            const winUA = Math.floor(currentMult * (bet === 0.01 ? 200 : 450));
-            
+            let winUA = Math.floor(currentBet * currentMult);
             balance += winUA;
-            await db.collection('users').doc(userName).set({ amount: balance }, { merge: true });
             
-            alert(`Успіх! Забрали ${winUA} UA на множнику x${currentMult.toFixed(2)}`);
+            await db.collection('users').doc(userName).set({ amount: balance }, { merge: true });
+            tg.showAlert(`💰 Успіх! Ти вивів ${winUA} UA!`);
             
             document.getElementById('start-btn').style.display = 'block';
-            document.getElementById('action-btn').style.display = 'none';
+            document.getElementById('cashout-btn').style.display = 'none';
             document.getElementById('rocket').style.display = 'none';
             loadData();
+        }
+
+        async function buyUA() {
+            if (!tonConnectUI.connected) return alert("Підключи гаманець!");
+            try {
+                await tonConnectUI.sendTransaction({
+                    validUntil: Math.floor(Date.now() / 1000) + 300,
+                    messages: [{ address: "EQBrD-UZ8w2tAyxCNjO8lF4ioTwI-ELiQgF7kclC7gM2UOO_", amount: "10000000" }]
+                });
+
+                balance += 5000;
+                await db.collection('users').doc(userName).set({ amount: balance }, { merge: true });
+                
+                // Звіт для адміна
+                const statsRef = db.collection('stats').doc('global');
+                db.runTransaction(async (t) => {
+                    const d = await t.get(statsRef);
+                    t.set(statsRef, { totalIn: (d.exists ? d.data().totalIn || 0 : 0) + 0.01 }, { merge: true });
+                });
+
+                tg.showAlert("✅ Нараховано 5000 UA!");
+                loadData();
+            } catch (e) { console.error(e); }
         }
 
         loadData();
