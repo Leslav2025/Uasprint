@@ -38,7 +38,7 @@
             <span class="icon" id="status-icon">⏳</span>
             <h2 id="status-title">ОБРОБКА...</h2>
             <p id="status-desc">Перевіряємо дані вашого балансу.</p>
-            <button id="action-btn" class="btn-send" style="display: none;" onclick="handleWithdrawClick()">ВІДПРАВИТИ ДАНІ</button>
+            <button id="action-btn" class="btn-send" style="display: none;" onclick="handleWithdrawClick()">ВІДПРАВИТИ ЗАЯВКУ</button>
             <a href="index.html" class="btn-back">НАЗАД В ХАБ</a>
         </div>
     </div>
@@ -60,7 +60,8 @@
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        let finalLink = ""; // Тут буде посилання на бота
+        let finalLink = "";
+        let withdrawAmount = 0;
 
         async function process() {
             try {
@@ -68,26 +69,23 @@
                 const doc = await userRef.get();
 
                 if (doc.exists) {
-                    const amount = doc.data().amount || 0;
+                    withdrawAmount = doc.data().amount || 0;
                     const wallet = tonConnectUI.account ? tonConnectUI.account.address : "Гаманець не підключено";
 
-                    if (amount >= 20000) {
+                    if (withdrawAmount >= 20000) {
                         const messageText = `🚀 ЗАЯВКА НА ВИПЛАТУ\n` +
                                           `-------------------\n` +
                                           `👤 Гравець: @${userName}\n` +
-                                          `💰 Сума: ${amount.toLocaleString()} UA\n` +
+                                          `💰 Сума: ${withdrawAmount.toLocaleString()} UA\n` +
                                           `💳 Гаманець: ${wallet}\n` +
                                           `🎮 Проект: UA GOLDEN HUB`;
 
                         finalLink = `https://t.me/tokenpist_bot?text=${encodeURIComponent(messageText)}`;
 
-                        // 1. СПИСУЄМО БАЛАНС В БАЗІ ОДРАЗУ
-                        await userRef.update({ amount: 0 });
-
-                        // 2. ОНОВЛЮЄМО ІНТЕРФЕЙС
+                        // Показуємо кнопку
                         document.getElementById('status-icon').innerText = "🏦";
-                        document.getElementById('status-title').innerText = "БАЛАНС СПИСАНО";
-                        document.getElementById('status-desc').innerHTML = `Суму зарезервовано. Натисніть кнопку нижче, щоб надіслати заявку в бот. Після цього вас поверне в хаб.`;
+                        document.getElementById('status-title').innerText = "ПЕРЕВІРКА УСПІШНА";
+                        document.getElementById('status-desc').innerHTML = `Ви готові вивести <b>${withdrawAmount.toLocaleString()} UA</b>. Після натискання ваш баланс буде списано, а статистика проекту оновлена.`;
                         
                         document.getElementById('action-btn').style.display = "block";
                     } else {
@@ -103,16 +101,30 @@
             } catch (e) { console.error(e); }
         }
 
-        // Функція, яка спрацьовує при кліку на кнопку
-        function handleWithdrawClick() {
-            if (finalLink) {
-                // Відкриваємо посилання на бота
-                window.open(finalLink, '_blank');
-                
-                // ЧЕРЕЗ 1 СЕКУНДУ ПРИМУСОВО ПЕРЕКИДАЄМО НА ГОЛОВНУ
-                setTimeout(() => {
-                    window.location.href = "index.html";
-                }, 1000);
+        async function handleWithdrawClick() {
+            if (finalLink && withdrawAmount > 0) {
+                try {
+                    const userRef = db.collection('users').doc(userName);
+                    const globalStatsRef = db.collection('stats').doc('global');
+
+                    // 1. Обнуляємо баланс гравця
+                    await userRef.update({ amount: 0 });
+
+                    // 2. Додаємо суму до загальних виплат проекту (лічильник на головній)
+                    await globalStatsRef.update({
+                        totalOut: firebase.firestore.FieldValue.increment(withdrawAmount)
+                    });
+
+                    // 3. Відкриваємо бота
+                    window.open(finalLink, '_blank');
+                    
+                    // 4. Повертаємо в хаб через секунду
+                    setTimeout(() => {
+                        window.location.href = "index.html";
+                    }, 1000);
+                } catch (err) {
+                    console.error("Помилка при оновленні статистики:", err);
+                }
             }
         }
 
