@@ -116,36 +116,58 @@
         };
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
-        const tg = window.Telegram.WebApp;
-        tg.expand();
+        
+        // Ініціалізація Telegram WebApp
+        const tg = window.Telegram?.WebApp;
+        if (tg) {
+            tg.expand();
+            if (tg.ready) tg.ready();
+        }
 
-        const user = tg.initDataUnsafe.user;
-        const userName = user ? (user.username || user.first_name) : "Гравець";
+        // Безпечне отримання імені користувача (захист від заборонених символів у назвах документів Firestore)
+        let rawUserName = "Гравець";
+        if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+            const u = tg.initDataUnsafe.user;
+            rawUserName = u.username || u.first_name || "Гравець";
+        } else {
+            // Фолбек для тестів у звичайному браузері
+            rawUserName = "Гравець_Тест";
+        }
+        
+        // Очищаємо ім'я від символів, які можуть зламати Firestore ID документа (наприклад, '/')
+        const userName = rawUserName.replace(/[\/\s]/g, "_");
 
         document.getElementById('user-name').innerText = userName.toUpperCase();
 
+        // Функція первинної перевірки/створення юзера для уникнення циклів в onSnapshot
+        function checkAndCreateUser() {
+            const userRef = db.collection('users').doc(userName);
+            userRef.get().then((doc) => {
+                if (!doc.exists) {
+                    userRef.set({ amount: 100 }, { merge: true }); // Можна дати стартовий баланс (наприклад 100) або 0
+                }
+            }).catch(err => console.error("Помилка авторизації користувача:", err));
+        }
+
         function startLiveSync() {
-            // ОНОВЛЕННЯ БАЛАНСУ ГРАВЦЯ (використовуємо 'amount' для синхронізації з іграми)
+            // 1. ОНОВЛЕННЯ БАЛАНСУ ГРАВЦЯ
             db.collection('users').doc(userName).onSnapshot((doc) => {
                 if (doc.exists) {
                     const bal = doc.data().amount || 0;
                     document.getElementById('user-balance').innerText = bal.toLocaleString();
-                } else {
-                    db.collection('users').doc(userName).set({ amount: 0 }, { merge: true });
                 }
-            });
+            }, (error) => console.error("Помилка отримання балансу:", error));
 
-            // ОНОВЛЕННЯ СТАТИСТИКИ ПРОЕКТУ
+            // 2. ОНОВЛЕННЯ СТАТИСТИКИ ПРОЄКТУ
             db.collection('stats').doc('global').onSnapshot((doc) => {
                 if (doc.exists) {
                     const s = doc.data();
                     document.getElementById('stat-ton').innerText = (s.totalIn || 0).toFixed(2) + " TON";
-                    // Приблизна статистика виплат (можна налаштувати логіку)
                     document.getElementById('stat-ua').innerText = (s.totalOut || 0).toLocaleString() + " UA";
                 }
-            });
+            }, (error) => console.error("Помилка статистики:", error));
 
-            // ОНОВЛЕННЯ ЛІДЕРБОРДУ
+            // 3. ОНОВЛЕННЯ ЛІДЕРБОРДУ
             db.collection('users').orderBy('amount', 'desc').limit(5).onSnapshot((snap) => {
                 const lList = document.getElementById('leader-list');
                 lList.innerHTML = '';
@@ -160,9 +182,14 @@
                         </div>`;
                     rank++;
                 });
+            }, (error) => {
+                document.getElementById('leader-list').innerHTML = '<div style="text-align:center; color:red; font-size:12px;">Помилка завантаження лідерів</div>';
+                console.error("Помилка лідерборду:", error);
             });
         }
 
+        // Запуск логіки
+        checkAndCreateUser();
         startLiveSync();
 
         // Живий лічильник онлайну
